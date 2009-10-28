@@ -1,13 +1,18 @@
 package com.appspot.baotwits.client.data.dto;
 
-import java.io.Serializable;
 
-public class LoginInfo implements Serializable {
+import com.google.gwt.user.client.rpc.IsSerializable;
+
+public class LoginInfo implements IsSerializable {
 
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 6253654388997574454L;
+	/**
+	 * 
+	 */
+	
 	private boolean loggedIn = false;
 	private String loginUrl;
 	private String logoutUrl;

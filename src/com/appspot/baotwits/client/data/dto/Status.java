@@ -1,10 +1,12 @@
 package com.appspot.baotwits.client.data.dto;
 
-import java.io.Serializable;
+
 import java.util.Date;
 
+import com.google.gwt.user.client.rpc.IsSerializable;
 
-public class Status implements Serializable, Comparable<Status>{
+
+public class Status implements IsSerializable, Comparable<Status>{
 	
 	/**
 	 * 
@@ -101,6 +103,7 @@ public class Status implements Serializable, Comparable<Status>{
 		// TODO Auto-generated method stub
 		return this.createdAt.compareTo(o.getCreatedAt());
 	}
+	
 	
 
 }

@@ -4,8 +4,8 @@ package com.appspot.baotwits.client;
 import java.util.ArrayList;
 
 
-import com.appspot.baotwits.client.data.dto.LoginInfo;
-import com.appspot.baotwits.client.data.dto.Status;
+import com.appspot.baotwits.client.data.dto.LoginInfoDto;
+import com.appspot.baotwits.client.data.dto.StatusDto;
 import com.appspot.baotwits.client.proxy.AuthService;
 import com.appspot.baotwits.client.proxy.AuthServiceAsync;
 import com.appspot.baotwits.client.proxy.TwitTwitService;
@@ -14,6 +14,8 @@ import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.dom.client.KeyDownEvent;
+import com.google.gwt.event.dom.client.KeyDownHandler;
 import com.google.gwt.event.dom.client.KeyUpEvent;
 import com.google.gwt.event.dom.client.KeyUpHandler;
 import com.google.gwt.i18n.client.DateTimeFormat;
@@ -34,7 +36,7 @@ public class Index implements EntryPoint {
 	private VerticalPanel mainPanel = new VerticalPanel();
 	private VerticalPanel loginPanel = new VerticalPanel();
 	private Label welcomeMsg = new Label();
-	private LoginInfo loginInfo= null;
+	private LoginInfoDto loginInfo= null;
 	private Label loginLabel = new Label();
 	private Anchor signInLink = new Anchor("Sign In");
 	private FlexTable statusesTable = new FlexTable();
@@ -48,9 +50,9 @@ public class Index implements EntryPoint {
 	public void onModuleLoad() {
 		// TODO Auto-generated method stub
 		AuthServiceAsync authService = GWT.create(AuthService.class);
-		authService.login(GWT.getHostPageBaseURL(), new AsyncCallback<LoginInfo>(){
+		authService.login(GWT.getHostPageBaseURL(), new AsyncCallback<LoginInfoDto>(){
 			
-			public void onSuccess(LoginInfo result) {
+			public void onSuccess(LoginInfoDto result) {
 				// TODO Auto-generated method stub
 				loginInfo = result;
 				if (loginInfo.isLoggedIn()){
@@ -113,9 +115,8 @@ public class Index implements EntryPoint {
 	
 	private void loadStatuses(){
 		TwitTwitServiceAsync twittwitService = GWT.create(TwitTwitService.class);
-		twittwitService.getStatuses(GWT.getHostPageBaseURL(), new AsyncCallback<ArrayList<Status>>() {
-			
-			public void onSuccess(ArrayList<Status> result) {
+		twittwitService.getStatuses(new AsyncCallback<ArrayList<StatusDto>>() {
+			public void onSuccess(ArrayList<StatusDto> result) {
 				// TODO Auto-generated method stub
 				if (result!=null){
 					/**
@@ -124,22 +125,19 @@ public class Index implements EntryPoint {
 					statuses.setText(0, 2, "Tweets");
 					**/
 					int count=0;
-					for (Status status: result){
+					for (StatusDto status: result){
 						if(!statuses.contains(status.getId())){
 							VerticalPanel vp1=createScreenNamePanel(status);
 							VerticalPanel vp2=createTweets(status);
-							if(count==0){
-								
-								statusesTable.insertRow(0);
-								statusesTable.setWidget(0, 0, vp1);
-								statusesTable.setWidget(0, 1, vp2);
-							}
-							else{
-								statusesTable.insertRow(count);
-								statusesTable.setWidget(count, 0, vp1);
-								statusesTable.setWidget(count, 1, vp2);
-								
-							}
+							statusesTable.insertRow(count);
+							statusesTable.setWidget(count, 0, vp1);
+							statusesTable.setWidget(count, 1, vp2);
+							statusesTable.getRowFormatter().addStyleName(count, "status");
+							statusesTable.getCellFormatter().setWidth(count, 0, "84");
+							statusesTable.getCellFormatter().setHeight(count, 0, "64");
+							statusesTable.getCellFormatter().setWidth(count, 1, "864");
+							statusesTable.getCellFormatter().setHeight (count, 1, "64");
+							
 							count++;
 							statuses.add(status.getId());
 						}
@@ -157,7 +155,7 @@ public class Index implements EntryPoint {
 				
 			}
 		});
-		
+		statusesTable.setStyleName("tweets");
 		mainPanel.add(statusesTable);
 	
 	}
@@ -185,6 +183,7 @@ public class Index implements EntryPoint {
 						String text = tweetBox.getText();
 						int remain = 140- text.length();
 						charRemain.setText(remain+ " Chars");
+						
 					}
 					
 					public void onFailure(Throwable caught) {
@@ -196,17 +195,40 @@ public class Index implements EntryPoint {
 			}
 		});
 		
-		tweetBox.addKeyUpHandler(new KeyUpHandler() {
-			
+		tweetButton.addStyleName("tweetButton");
+		tweetBox.addKeyDownHandler(new KeyDownHandler() {
 		
-			public void onKeyUp(KeyUpEvent event) {
+		
+			public void onKeyDown(KeyDownEvent event) {
 				// TODO Auto-generated method stub
 				String text = tweetBox.getText();
 				int remain = 140- text.length();
 				charRemain.setText(remain+ " Chars");
+				if(remain<=0){
+					tweetBox.addStyleName("tweetExceedLimit");
+				}
+				else{
+					tweetBox.removeStyleName("tweetExceedLimit");
+				}
 			}
 		});
 		
+		tweetBox.addKeyUpHandler(new KeyUpHandler() {
+			
+			@Override
+			public void onKeyUp(KeyUpEvent event) {
+				String text = tweetBox.getText();
+				int remain = 140- text.length();
+				charRemain.setText(remain+ " Chars");
+				if(remain<=0){
+					tweetBox.addStyleName("tweetExceedLimit");
+				}
+				else{
+					tweetBox.removeStyleName("tweetExceedLimit");
+				}
+				
+			}
+		});
 		
 		auxPanel.add(tweetBox);
 		auxPanel.add(tweetButton);
@@ -216,23 +238,28 @@ public class Index implements EntryPoint {
 		
 	}
 	
-	private VerticalPanel createScreenNamePanel(Status status){
+	private VerticalPanel createScreenNamePanel(StatusDto status){
 		VerticalPanel vp1 = new VerticalPanel();
 		Image profileImage = new Image();
 		Label screenName = new Label();
 		profileImage.setUrl(status.getImageProfileURL());
+		profileImage.setHeight("48");
+		profileImage.setWidth("48");
 		screenName.setText(status.getScreenName());
+		screenName.addStyleName("screenName");
 		vp1.add(profileImage);
 		vp1.add(screenName);
 		return vp1;
 	}
 	
-	private VerticalPanel createTweets(Status status){
+	private VerticalPanel createTweets(StatusDto status){
 		VerticalPanel vp2 = new VerticalPanel();
 		DateTimeFormat dateTimeFormat = DateTimeFormat.getFormat("yyyy.MM.dd 'at' HH:mm:ss");
 		Label createdAt= new Label(dateTimeFormat.format(status.getCreatedAt()));
+		createdAt.addStyleName("date");
 		Label tweets = new Label();
 		tweets.getElement().setInnerHTML(status.getText());
+		tweets.addStyleName("tweets");
 		vp2.add(createdAt);
 		vp2.add(tweets);
 		return vp2;

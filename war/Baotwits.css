@@ -2,11 +2,16 @@
 
 
 /** Example rules used by the template application (remove for your app) */
+.bodyBg{
+	background-color: #F0F0F0  ;
+}
+
 h1 {
-  font-size: 2em;
-  font-weight: bold;
-  color: #777777;
-  margin: 40px 0px 70px;
+	color:#5F7F96 ;
+	font-size:5em;
+	font-weight:bold;
+	margin:40px 0 70px;
+	font-family:comic Sans MS;
 }
 
 .sendButton {
@@ -33,6 +38,72 @@ h1 {
 }
 
 .charRemain {
-  color: blue;
+  color:#FF9900 ;
+  font-weight:bold;
+  font-family:arial;
+  margin-bottom: 20px;
 }
 
+table.tweets {
+	border-collapse:collapse;
+	cell-padding:0;
+}
+.status{
+  background-color: F0F0F0;
+}
+
+.tweets{
+	vertical-align: center;
+	font-family: "MyRiad Pro",MyRiad,Helvetica,Arial,sans-serif;
+	font-weight: bold;
+	color:#333333;
+	font-size: 
+}
+
+.screenName{
+	vertical-align: center;
+	font-family: "MyRiad Pro",MyRiad,Helvetica,Arial,sans-serif;
+	font-weight: bold;
+	color:#999582;
+}
+
+.date{
+	vertical-align: center;
+	font-family: "MyRiad Pro",MyRiad,Helvetica,Arial,sans-serif;
+	font-weight: bold;
+	color: #58706D;
+}
+
+.welcomeMsg{
+	font-family: comic Sans MS;
+	color: #F0F0F0;
+	font-weight: bold;
+	font-size: 2em;
+}
+
+.tweetButton{
+	height: 3em;
+	margin-left: 20px;
+}
+
+.tweetExceedLimit{
+	background-color: #B32C05   
+}
+
+.tweetOkLimit{
+	color: white
+}
+
+.commentBox{
+    background-color: #83AF9B;
+    cell-padding:0;
+}
+
+.comments{
+	border-collapse:collapse;
+	cell-padding:0;
+}
+
+.postProfile{
+	background-color: #C8C8A9;
+}
