@@ -1,0 +1,113 @@
+package com.appspot.baotwits.server.controller.comment;
+
+import java.util.logging.Logger;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.client.RestTemplate;
+
+import com.appspot.baotwits.server.constants.comment.CommentConstants;
+import com.appspot.baotwits.server.data.dao.comment.CommentorDao;
+import com.appspot.baotwits.server.data.dao.comment.TwitCommentorDao;
+import com.appspot.baotwits.server.data.model.comment.Commentor;
+import com.appspot.baotwits.server.data.model.comment.TwitCommentor;
+import com.google.appengine.api.datastore.Key;
+import com.google.appengine.api.datastore.KeyFactory;
+
+import twitter4j.Twitter;
+import twitter4j.TwitterException;
+import twitter4j.User;
+import twitter4j.http.AccessToken;
+import twitter4j.http.RequestToken;
+
+
+@Controller
+public class CommentLoginController {
+	private static final Logger logger = Logger.getLogger(CommentLoginController.class.getName());
+	
+	@Autowired
+	private RestTemplate restTemplate; 
+	
+	@Autowired
+	private TwitCommentorDao twitCommentorDao;
+	
+	@RequestMapping(value="/comment/login/twitter", method=RequestMethod.GET)
+	public String twitterCallBackLogin(HttpSession session){
+		RequestToken requestToken = (RequestToken)session.getAttribute("twitterRequestToken");
+		try {
+			AccessToken accessToken= requestToken.getAccessToken();
+			logger.info("AccessToken is "+accessToken.getToken());
+			Twitter twitter = new Twitter();
+			twitter.setOAuthConsumer(CommentConstants.getCommentTwitterConsumerKey(), CommentConstants.getCommentTwitterConsumerSecret());
+			twitter.setOAuthAccessToken(accessToken);
+			User user = twitter.verifyCredentials();
+			TwitCommentor twitCommentor = twitCommentorDao.getTwitCommentor(String.valueOf(user.getId()));
+			Commentor commentor;
+			if (twitCommentor ==null){
+				logger.info("New TwitUser");
+				twitCommentor = new TwitCommentor();
+				this.updateTwitCommentorFields(twitCommentor, user, accessToken);
+				commentor = twitCommentorDao.createNewCommentor(twitCommentor);
+			}
+			else{
+				logger.info("Existing twitUser");
+				this.updateTwitCommentorFields(twitCommentor, user, accessToken);
+				commentor = twitCommentorDao.updateTwitCommentor(twitCommentor);
+			}
+			logger.info("Commentor is "+commentor);
+			logger.info("CommentorId is "+commentor.getCommenterId());
+			//twitCommentor.setURL(user.getURL().toString());
+			session.setAttribute("profileImageURL", twitter.verifyCredentials().getProfileImageURL().toString());
+		}catch (TwitterException e) {
+			// TODO Auto-generated catch block
+			 if(401 == e.getStatusCode()){
+		          logger.warning("Unable to get AccessToken");
+		       }
+			 else{
+		          logger.warning(e.getMessage());
+			 }
+		}
+		return "SuccessfulAuthentication";
+	}
+	
+	@RequestMapping(value="/comment/login/facebook", method=RequestMethod.GET)
+	public String facebookCallBackLogin(HttpServletRequest request, HttpSession session){
+		String sessionJSON = request.getParameter("session");
+		logger.info("Session is"+sessionJSON);
+		try {
+			JSONObject jsonObject = new JSONObject(sessionJSON);
+			String sessionId= jsonObject.getString("session_key");
+			String uid= jsonObject.getString("uid");
+			String secret = jsonObject.getString("secret");
+			logger.info("result is "+sessionId+" "+uid+" "+secret);
+			String userInfoURL = "http://api.facebook.com/restserver.php?method=users.getInfo&api_key={apiKey}&call_id={callId}&sig={sig}&v=1.0&uids={uid}&fields={field}&session_key={sessionKey}";
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			logger.warning(e.getMessage());
+		}
+		
+		session.setAttribute("profileImageURL", "http://www.virtuousplanet.com/shops/userimages/00001/00000000012/section/00000000000000018480.png");
+		return "SuccessfulAuthentication";
+	}
+	
+	private void updateTwitCommentorFields(final TwitCommentor twitCommentor, User user, AccessToken accessToken){
+		KeyFactory.Builder keyBuilder = new KeyFactory.Builder(TwitCommentor.class.getSimpleName(), user.getId());
+		twitCommentor.setId(keyBuilder.getKey());
+		twitCommentor.setAccessToken(accessToken);
+		twitCommentor.setFollowersCount(user.getFollowersCount());
+		twitCommentor.setFriendCount(user.getFriendsCount());
+		twitCommentor.setLocation(user.getLocation());
+		twitCommentor.setName(user.getName());
+		twitCommentor.setScreenName(user.getScreenName());
+		twitCommentor.setStatusesCount(user.getStatusesCount());
+		twitCommentor.setProfileImageURL(user.getProfileImageURL().toString());
+		logger.info("User url is "+user.getURL());
+	}
+}

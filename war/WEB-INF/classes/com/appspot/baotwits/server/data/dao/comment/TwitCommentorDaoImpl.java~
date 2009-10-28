@@ -1,0 +1,86 @@
+package com.appspot.baotwits.server.data.dao.comment;
+
+import java.util.logging.Logger;
+
+import javax.jdo.JDOObjectNotFoundException;
+import javax.jdo.PersistenceManager;
+import javax.jdo.Transaction;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
+
+import com.appspot.baotwits.server.constants.comment.CommentConstants;
+import com.appspot.baotwits.server.data.model.comment.Commentor;
+import com.appspot.baotwits.server.data.model.comment.TwitCommentor;
+import com.google.appengine.api.datastore.Key;
+import com.google.appengine.api.datastore.KeyFactory;
+@Repository
+public class TwitCommentorDaoImpl implements TwitCommentorDao {
+	private static final Logger logger = Logger.getLogger(TwitCommentorDaoImpl.class.getName());
+	private PersistenceManager pm;
+	
+	
+	@Autowired
+	public void setPersistenceManager(PersistenceManager pm){
+		this.pm = pm;
+	}
+	public Commentor createNewCommentor(TwitCommentor twitCommentor) {
+		Transaction tx = pm.currentTransaction();
+		Commentor commentor = new Commentor();
+		try{
+			tx.begin();
+			pm.makePersistent(twitCommentor);
+			KeyFactory.Builder keyBuilder = new KeyFactory.Builder(twitCommentor.getId());
+			keyBuilder.addChild(Commentor.class.getSimpleName(), CommentConstants.getTwitterType()+"_"+twitCommentor.getId());
+			Key key=keyBuilder.getKey();
+			commentor.setCommenterId(key);
+			commentor.setCommenterType(CommentConstants.getTwitterType());
+			commentor=pm.makePersistent(commentor);
+			commentor = pm.getObjectById(Commentor.class, key);
+			logger.info("Commenter is "+ commentor);
+			logger.info("Commentor id is "+commentor.getCommenterId());
+			twitCommentor.setCommentor(commentor.getCommenterId());
+			twitCommentor=pm.makePersistent(twitCommentor);
+			
+			tx.commit();
+			
+		}
+		catch(Exception ex){
+			ex.printStackTrace();
+			logger.warning(ex.getMessage());
+			for(StackTraceElement element: ex.getStackTrace()){
+				logger.warning(element.getFileName()+"::"+element.getClassName()+"::"+element.getMethodName()+"::"+element.getLineNumber());
+			}
+			commentor= null;
+		}
+		finally {
+            if (tx.isActive()) {
+                tx.rollback();
+           }
+		}
+		return commentor;
+	}
+
+	@Override
+	public TwitCommentor getTwitCommentor(String id) {
+		// TODO Auto-generated method stub
+		Key key = KeyFactory.createKey(TwitCommentor.class.getSimpleName(), id);
+		try{
+			TwitCommentor twitCommentor = pm.getObjectById(TwitCommentor.class, key);
+			TwitCommentor twitCommentorCopy = pm.detachCopy(twitCommentor);
+			return twitCommentorCopy;
+		}
+		catch(JDOObjectNotFoundException ex){
+			return null;
+		}
+	}
+
+	@Override
+	public Commentor updateTwitCommentor(TwitCommentor twitCommentor) {
+		// TODO Auto-generated method stub
+		this.pm.makePersistent(twitCommentor);
+		Commentor commentor = pm.getObjectById(Commentor.class, twitCommentor.getCommentor());
+		return commentor;
+	}
+
+}

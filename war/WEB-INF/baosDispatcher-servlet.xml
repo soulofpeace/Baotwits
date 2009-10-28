@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+
+	<context:component-scan base-package="com.appspot.baotwits" />
+
+	<bean id="persistenceManagerFactory" factory-bean="PMF" factory-method="persistenceManagerFactory" />
+	<bean class="org.springframework.web.servlet.mvc.annotation.DefaultAnnotationHandlerMapping">
+		<property name="alwaysUseFullPath" value="false"/>
+	</bean>
+	
+	<bean name="twittwitServiceImpl" class="com.appspot.baotwits.server.service.TwitTwitServiceImpl">
+		<property name="twitUserDao" ref="twitUserDaoImpl"/>	
+	</bean>
+	
+	<bean name="authServiceImpl" class="com.appspot.baotwits.server.service.AuthServiceImpl">
+		<property name="twitUserDao" ref="twitUserDaoImpl"/>	
+	</bean>
+	
+	<bean name="commentLoginServiceImpl" class="com.appspot.baotwits.server.service.comment.CommentLoginServiceImpl"/>
+	
+	<bean name="twittwitController" class="com.appspot.baotwits.server.controller.GWTController">
+		<property name="remoteService" ref="twittwitServiceImpl"/>
+	</bean>
+    
+    <bean name="authController" class="com.appspot.baotwits.server.controller.GWTController">
+		<property name="remoteService" ref="authService"/>
+	</bean>
+	
+	<bean name="commentLoginServiceController" class="com.appspot.baotwits.server.controller.GWTController">
+		<property name="remoteService" ref="commentLoginService"/>
+	</bean>
+	
+	<bean name="commentPostingServiceController" class="com.appspot.baotwits.server.controller.GWTController">
+		<property name="remoteService" ref="commentPostingService"/>
+	</bean>
+	
+	<bean id="requestSetter" class="com.appspot.baotwits.server.service.util.RequestInjection">
+		<property name="requestSetterName" value="setRequest"/>
+		<property name="responseSetterName" value="setResponse"/>
+	</bean>
+	
+	
+	<bean id="authService" class="org.springframework.aop.framework.ProxyFactoryBean">
+		<property name="target" ref="authServiceImpl"/>
+		<property name="autodetectInterfaces" value="true"/>
+		<property name="interceptorNames">
+		<list>
+			<value>requestSetter</value>
+		</list>
+		</property>
+	</bean>
+	
+	<bean id="commentLoginService" class="org.springframework.aop.framework.ProxyFactoryBean">
+		<property name="target" ref="commentLoginServiceImpl"/>
+		<property name="autodetectInterfaces" value="true"/>
+		<property name="interceptorNames">
+		<list>
+			<value>requestSetter</value>
+		</list>
+		</property>
+	</bean>
+	
+	<bean id="commentPostingService" class="org.springframework.aop.framework.ProxyFactoryBean">
+		<property name="target" ref="commentPostingServiceImpl"/>
+		<property name="autodetectInterfaces" value="true"/>
+		<property name="interceptorNames">
+		<list>
+			<value>requestSetter</value>
+		</list>
+		</property>
+	</bean>
+		
+	<bean class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
+		<property name="mappings">
+			<value>
+				baotwits/twittwit=twittwitController
+				baotwits/auth=authController
+				User/twittwit=twittwitController
+				User/comment/login=commentLoginServiceController
+				User/comment/post=commentPostingServiceController
+			</value>
+		</property>
+	</bean>
+	
+	
+	<bean id="viewResolver" class="org.springframework.web.servlet.view.UrlBasedViewResolver">
+    	<property name="viewClass" value="org.springframework.web.servlet.view.JstlView"/>
+    	<property name="prefix" value="/WEB-INF/jsp/"/>
+    	<property name="suffix" value=".jsp"/>
+	</bean>
+
+	
+</beans>
+  

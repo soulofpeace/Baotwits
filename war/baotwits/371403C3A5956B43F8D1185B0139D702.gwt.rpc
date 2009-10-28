@@ -1,0 +1,6 @@
+com.appspot.baotwits.client.data.dto.LoginInfoDto, true
+com.google.gwt.user.client.rpc.IncompatibleRemoteServiceException, true
+java.lang.Exception, false
+java.lang.RuntimeException, false
+java.lang.String, true
+java.lang.Throwable, false
