@@ -43,53 +43,73 @@ public class User implements EntryPoint {
 	private FlexTable statusesTable = new FlexTable();
 	private VerticalPanel mainPanel = new VerticalPanel();
 	private ArrayList<Long> statuses = new ArrayList<Long>();
-	private static HashMap<Long, CommentDropDown> statusCommentHash = new HashMap();
-	private String commentorWrapperId;
-	private double imageProfileWidth;
-	private double leftColumnWidth;
-	private double rightColumnWidth;
+	
+	private static HashMap<Long, CommentDropDown> statusCommentHash = new HashMap<Long, CommentDropDown>();
+	
+	//profile pix dimension
+	private double imageProfileSize;
+	//tweets width
+	private double tweetsWidth;
 	private Label debugLabel = new Label();
 
+	public double getImageProfileSize(){
+		return this.imageProfileSize;
+	}
+	
+	public double getTweetsWidth(){
+		return this.tweetsWidth;
+	}
+	
 	public void onModuleLoad() {
 		// TODO Auto-generated method stub
 		this.defineUpdateLogin();
-		this.dimensionElements();
+		this.setDimension();
+		
 		String userId = this.getById("userId");
 		this.loadOwnStatuses(userId);
-		Label height = new Label("Client Height is "+Window.getClientHeight());
-		Label width = new Label("Client width is "+(Window.getClientWidth()/4.0));
-		mainPanel.add(height);
-		mainPanel.add(width);
-		mainPanel.add(debugLabel);
-		RootPanel.get("displayTwits").add(mainPanel);
 		
+		mainPanel.add(debugLabel);
+		RootPanel.get("displayTwits").add(mainPanel);	
 		
 		updateLogin();
 	}
 	
-	public double getLeftColumnWidth(){
-		return this.leftColumnWidth;
-	}
 	
-	public double getRightColumnWidth(){
-		return this.rightColumnWidth;
+	public static void updateLogin(){
+		CommentLoginServiceAsync  commentLoginService = GWT.create(CommentLoginService.class);
+		commentLoginService.getUserLogin(new AsyncCallback<CommentorDto>(){
+
+			@Override
+			public void onFailure(Throwable caught) {
+				// TODO Auto-generated method stub
+			}
+
+			public void onSuccess(final CommentorDto commentor){
+				// TODO Auto-generated method stub
+				if (commentor==null){
+					return;
+				}
+				Collection<CommentDropDown> c = statusCommentHash.values();
+				Iterator<CommentDropDown> iter = c.iterator();
+				while(iter.hasNext()){
+					CommentDropDown commentDropDown = iter.next();
+					commentDropDown.createCommentorProfilePanel(commentor);
+				}
+									
+			}
+			
+		});
 	}
-	
-	private void dimensionElements(){
-		int height = Window.getClientHeight();
+
+	private void setDimension(){
+		//leaving width for scrollbar
 		int width = Window.getClientWidth()-40;
-		this.leftColumnWidth=(width/4.0);
-		String text=this.debugLabel.getText();
-		text+="Left column width: "+leftColumnWidth+"\n";
-		this.imageProfileWidth = this.leftColumnWidth<48?this.leftColumnWidth:48.0;
-		this.rightColumnWidth=width/4.0 * 3;
-		text+="right column width: "+rightColumnWidth+"\n";
-		this.debugLabel.setText(text);
+		this.imageProfileSize = ((width/4.0))<48?width/4.0:48;
+		this.tweetsWidth=width-this.imageProfileSize;
 	}
 	
 	private native void defineUpdateLogin() /*-{
 		$wnd.updateLogin = @com.appspot.baotwits.client.user.User::updateLogin();
-		
 	}-*/;
 	
 	private native String getById(String id) /*-{
@@ -106,11 +126,6 @@ public class User implements EntryPoint {
 				public void onSuccess(ArrayList<StatusDto> result) {
 					// TODO Auto-generated method stub
 					if (result!=null){
-						/**
-						statuses.setText(0, 0, "Time");
-						statuses.setText(0,  1, "From");
-						statuses.setText(0, 2, "Tweets");
-						**/
 						int count=0;
 						for (StatusDto status: result){
 							if(!statuses.contains(status.getId())){
@@ -120,14 +135,8 @@ public class User implements EntryPoint {
 								statusesTable.setWidget(count, 0, vp1);
 								statusesTable.setWidget(count, 1, vp2);
 								statusesTable.getRowFormatter().addStyleName(count, "status");
-								//statusesTable.getCellFormatter().setWidth(count, 0, "84");
-								//statusesTable.getCellFormatter().setHeight(count, 0, "64");
-								//statusesTable.getCellFormatter().setWidth(count, 1, "864");
-								//statusesTable.getCellFormatter().setHeight (count, 1, "64");
-								statusesTable.getCellFormatter().setWidth(count, 0, String.valueOf(leftColumnWidth));
-								statusesTable.getCellFormatter().setHeight(count, 0, "64");
-								statusesTable.getCellFormatter().setWidth(count, 1, String.valueOf(rightColumnWidth));
-								statusesTable.getCellFormatter().setHeight(count, 1, "64");
+								statusesTable.getCellFormatter().setWidth(count, 0, String.valueOf(imageProfileSize));
+								statusesTable.getCellFormatter().setWidth(count, 1, String.valueOf(tweetsWidth));
 								count++;
 								CommentDropDown commentDropDown = new CommentDropDown(String.valueOf(status.getId()));
 								statusCommentHash.put(status.getId(), commentDropDown);
@@ -160,247 +169,98 @@ public class User implements EntryPoint {
 			VerticalPanel vp1 = new VerticalPanel();
 			Image profileImage = new Image();
 			profileImage.setUrl(status.getImageProfileURL());
-			profileImage.setHeight(String.valueOf(this.imageProfileWidth));
-			profileImage.setWidth(String.valueOf(this.imageProfileWidth));
+			profileImage.setHeight(String.valueOf(this.imageProfileSize));
+			profileImage.setWidth(String.valueOf(this.imageProfileSize));
 			vp1.add(profileImage);
 			return vp1;
 		}
 		
 		private VerticalPanel createTweets(StatusDto status){
 			VerticalPanel vp2 = new VerticalPanel();
+			
 			Label screenName = new Label();
 			screenName.setText(status.getScreenName());
 			screenName.addStyleName("screenName");
-			screenName.setWidth(String.valueOf(leftColumnWidth));
+			screenName.setWidth(String.valueOf(this.tweetsWidth));
 			screenName.setWordWrap(true);
+			
 			DateTimeFormat dateTimeFormat = DateTimeFormat.getFormat("yyyy.MM.dd 'at' HH:mm:ss");
 			Label createdAt= new Label(dateTimeFormat.format(status.getCreatedAt()));
-			createdAt.setWidth(String.valueOf(this.rightColumnWidth));
+			createdAt.setWidth(String.valueOf(this.tweetsWidth));
 			createdAt.setWordWrap(true);
 			createdAt.addStyleName("date");
+			
 			Label tweets = new Label();
 			tweets.getElement().setInnerHTML(status.getText());
 			tweets.addStyleName("tweets");
-			tweets.setWidth(String.valueOf(this.rightColumnWidth));
+			tweets.setWidth(String.valueOf(this.tweetsWidth));
 			tweets.setWordWrap(true);
+			
 			vp2.add(screenName);
 			vp2.add(createdAt);
 			vp2.add(tweets);
 			return vp2;
 		}
 		
-		
-		public static void updateLogin(){
-			CommentLoginServiceAsync  commentLoginService = GWT.create(CommentLoginService.class);
-			commentLoginService.getUserLogin(new AsyncCallback<CommentorDto>(){
-
-				@Override
-				public void onFailure(Throwable caught) {
-					// TODO Auto-generated method stub
-				}
-
-				public void onSuccess(final CommentorDto commentor){
-					// TODO Auto-generated method stub
-					if (commentor==null){
-						return;
-					}
-					Collection<CommentDropDown> c = statusCommentHash.values();
-					Iterator<CommentDropDown> iter = c.iterator();
-					while(iter.hasNext()){
-						final CommentDropDown commentDropDown = iter.next();
-						VerticalPanel profilePanel = new VerticalPanel();
-						profilePanel.setWidth(String.valueOf(commentDropDown.getPostingPanelLeftColumnWidth()));
-						Label postAs = new Label("Says");
-						postAs.setWidth(String.valueOf(commentDropDown.getPostingPanelLeftColumnWidth()));
-						postAs.setWordWrap(true);
-						Image profilePix = new Image();
-						Label name = new Label(commentor.getName());
-						name.setWordWrap(true);
-						name.setWidth(String.valueOf(commentDropDown.getPostingPanelLeftColumnWidth()));
-						profilePix.setUrl(commentor.getProfileImageURL());
-						profilePix.setWidth(String.valueOf(commentDropDown.getPostingPanelImageProfileWidth()));
-						profilePix.setHeight(String.valueOf(commentDropDown.getPostingPanelImageProfileWidth()));
-						profilePanel.add(profilePix);
-						profilePanel.add(name);
-						Button postButton = new Button("Post!");
-						postButton.addClickHandler(new ClickHandler() {
-							
-							@Override
-							public void onClick(ClickEvent event) {
-								// TODO Auto-generated method stub
-								CommentPostingServiceAsync commentPostingService = GWT.create(CommentPostingService.class);
-								CommentDto commentDto = new CommentDto();
-								commentDto.setCommentorDto(commentor);
-								Date date = new Date();
-								commentDto.setDate(date);
-								commentDto.setStatusId(commentDropDown.getStatusId());
-								commentDto.setText(commentDropDown.getCommentBox().getText());
-								commentPostingService.addComment(commentDto, new AsyncCallback<Boolean>() {
-									
-									@Override
-									public void onSuccess(Boolean result) {
-										// TODO Auto-generated method stub
-										commentDropDown.getCommentBox().setText("");
-										commentDropDown.update();
-									}
-									
-									@Override
-									public void onFailure(Throwable caught) {
-										// TODO Auto-generated method stub
-										
-									}
-								});
-								
-							}
-						});
-						commentDropDown.getPostingArea().insert(postAs, 0);
-						commentDropDown.getPostingArea().insert(profilePanel, 0);
-						commentDropDown.getPostingArea().addStyleName("postProfile");
-						//commentDropDown.getLoginPanel().add(postAs);
-						commentDropDown.getDropDown().remove(commentDropDown.getSignInPanel());
-						//commentDropDown.getDropDown().insert(commentDropDown.getLoginPanel(), 1);
-						commentDropDown.getDropDown().add(postButton);
-					}
-					
-				}
-				
-			});
+		private void debug(String text){
+			String original=this.debugLabel.getText();
+			original+=text;
+			this.debugLabel.setText(original);
 		}
 		
+		
+		
+		
 		private class CommentDropDown extends VerticalPanel{
-			private final DisclosurePanel commentPanel = new DisclosurePanel("Click to Comment");
-			private final VerticalPanel dropDown = new VerticalPanel();
+			
+			private final DisclosurePanel commentDropDown = new DisclosurePanel("Click to Comment");
+			private final VerticalPanel contentPanel = new VerticalPanel();
 			private final FlexTable commentTable = new FlexTable();
-			private final ArrayList<String> comments = new ArrayList<String>(); 
 			private final TextArea commentBox = new TextArea();
-			private final HorizontalPanel postingArea = new HorizontalPanel();
+			private final HorizontalPanel commentorProfilePanel = new HorizontalPanel();
 			private final HorizontalPanel signInPanel = new HorizontalPanel();
+			
+			private final ArrayList<String> comments = new ArrayList<String>(); 
+			
+			//dimensioning variable
 			private final int noTypeLogOn=2;
 			private double logonWidth;
-			private double commentLeftColumnWidth;
-			private double commentRightColumnWidth;
-			private double postingPanelLeftColumnWidth;
-			private double postingPanelImageProfileWidth;
-			private double postingPanelMiddleColumnWidth;
-			private double postingPanelRightColumnWidth;
-			private double commentImageProfilePixWidth;
+			private double commentorProfilePixSize;
+			private double commentsWidth;
+			private double width;
+			
 			private String statusId;
 			
 			public CommentDropDown(String statusId){
 				this.setDimension();
-				this.postingArea.setVerticalAlignment(ALIGN_MIDDLE);
+				
+				this.commentDropDown.setWidth(String.valueOf(tweetsWidth));
+				
 				this.statusId = statusId;
-				this.getDropDown().add(this.getCommentTable());
-				//this.getCommentTable().addStyleName("comments");
+				
 				this.update();
-				this.createCommentBox();
-				this.getDropDown().add(this.getPostingArea());
-				this.getDropDown().add(commentBox);
-				this.createSignInPanel();
-				this.getDropDown().add(this.getSignInPanel());
-				this.getCommentPanel().setContent(this.getDropDown());
-				this.add(this.commentPanel);
-				
-			}
-			
-			public double getCommentLeftColumnWidth(){
-				return this.commentLeftColumnWidth;
-			}
-			
-			public double getCommentRightColumnWidth(){
-				return this.commentRightColumnWidth;
-			}
-			
-			private void setDimension(){
-				this.commentPanel.setWidth(String.valueOf(rightColumnWidth));
-				this.commentBox.setWidth(String.valueOf(rightColumnWidth));
-				this.signInPanel.setWidth(String.valueOf(rightColumnWidth));
-				this.postingArea.setWidth(String.valueOf(rightColumnWidth));
-				this.commentLeftColumnWidth=rightColumnWidth/4.0;
-				this.commentImageProfilePixWidth=(commentLeftColumnWidth>48)?48:commentLeftColumnWidth;
-				this.commentRightColumnWidth=rightColumnWidth/4.0*3;
-				this.postingPanelLeftColumnWidth=rightColumnWidth/6.0;
-				this.postingPanelMiddleColumnWidth=rightColumnWidth/6.0;
-				this.postingPanelRightColumnWidth=rightColumnWidth/3.0*2;
-				this.setPostingPanelImageProfileWidth((postingPanelLeftColumnWidth>48)?48:postingPanelLeftColumnWidth);
-				
-			}
-			
-			public void update(){
-				CommentPostingServiceAsync commentPostingService =GWT.create(CommentPostingService.class);
-				commentPostingService.getComments(statusId, new AsyncCallback<ArrayList<CommentDto>>(){
-
-					@Override
-					public void onFailure(Throwable caught) {
-						// TODO Auto-generated method stub
-						
-					}
-
-					@Override
-					public void onSuccess(ArrayList<CommentDto> result) {
-						// TODO Auto-generated method stub
-						int i=comments.size();
-						if(result.size()==0){
-							commentPanel.getHeaderTextAccessor().setText("Be the first to comment!");
-						}
-						else{
-							commentPanel.getHeaderTextAccessor().setText(result.size()+" Comments!");
-						}
-						for (final CommentDto commentDto: result){
-							if(!comments.contains(commentDto.getId())){
-								final HorizontalPanel horizontalPanel = new HorizontalPanel();
-								final VerticalPanel namePanel = new VerticalPanel();
-								final VerticalPanel textPanel = new VerticalPanel();
-								final Label commentsText = new Label();
-								commentsText.setWordWrap(true);
-								Image profilePix = new Image(commentDto.getCommentorDto().getProfileImageURL());
-								profilePix.setWidth(String.valueOf(commentImageProfilePixWidth));
-								Label name = new Label(commentDto.getCommentorDto().getName());
-								name.setWordWrap(true);
-								name.setWidth(String.valueOf(commentLeftColumnWidth));
-								namePanel.add(profilePix);
-								DateTimeFormat dateTimeFormat = DateTimeFormat.getFormat("yyyy.MM.dd 'at' HH:mm:ss");
-								final Label dateCommented = new Label(dateTimeFormat.format(commentDto.getDate()));
-								dateCommented.setWidth(String.valueOf(commentRightColumnWidth));
-								dateCommented.setWordWrap(true);
-								commentsText.setText(commentDto.getText());
-								commentsText.setWidth(String.valueOf(commentRightColumnWidth));
-								commentsText.setWordWrap(true);
-								textPanel.add(name);
-								textPanel.add(dateCommented);
-								textPanel.add(commentsText);
-								
-								horizontalPanel.add(namePanel);
-								horizontalPanel.add(textPanel);
-								
-								getCommentTable().insertRow(i);
-								getCommentTable().setWidget(i, 0, horizontalPanel);
-								//getCommentTable().setWidget(i, 1, textPanel);
-								getCommentTable().getCellFormatter().addStyleName(i, 0, "commentBox");
-								getCommentTable().getCellFormatter().setWidth(i, 0, String.valueOf(rightColumnWidth));
-								//getCommentTable().getCellFormatter().addStyleName(i, 1, "commentBox");
-								//getCommentTable().getCellFormatter().setWidth(i, 1, "864");
-								//getCommentTable().getCellFormatter().setHeight (i, 1, "64");
-								comments.add(commentDto.getId());
-								i++;
-							}
-							
-							
-						}
-						
-					}
-
+				this.contentPanel.add(this.getCommentTable());
 					
-				});
+				this.contentPanel.add(this.getCommentorProfilePanel());
+				
+				this.createCommentBox();
+				this.contentPanel.add(commentBox);
+				
+				this.createSignInPanel();
+				this.contentPanel.add(this.getSignInPanel());
+				
+				this.commentDropDown.setContent(this.getContentPanel());
+				this.add(this.commentDropDown);
 				
 			}
 			
-			public DisclosurePanel getCommentPanel() {
-				return commentPanel;
+			
+			public DisclosurePanel getCommentDropDown() {
+				return commentDropDown;
 			}
 			
-			public VerticalPanel getDropDown() {
-				return dropDown;
+			public VerticalPanel getContentPanel() {
+				return contentPanel;
 			}
 			
 			public TextArea getCommentBox() {
@@ -415,19 +275,150 @@ public class User implements EntryPoint {
 				return signInPanel;
 			}
 
-			
 			public String getStatusId(){
 				return this.statusId;
 			}
 			
+			public HorizontalPanel getCommentorProfilePanel() {
+				return commentorProfilePanel;
+			}		
+
+			public void setLogonWidth(double logonWidth) {
+				this.logonWidth = logonWidth;
+			}
+
+			public double getLogonWidth() {
+				return logonWidth;
+			}
+			
+			public double getCommentorProfilePixSize(){
+				return this.commentorProfilePixSize;
+			}
+			
+			public double getCommentsWidth(){
+				return this.commentsWidth;
+			}
+			
+			
+			
+			public void createCommentorProfilePanel(final CommentorDto commentor){
+				this.commentorProfilePanel.setWidth(String.valueOf(tweetsWidth));
+				
+				VerticalPanel profilePixPanel = new VerticalPanel();
+				profilePixPanel.setWidth(String.valueOf(this.commentorProfilePixSize));
+				
+				Label postAs = new Label(commentor.getName()+" Says");
+				postAs.setWidth(String.valueOf(this.commentsWidth));
+				postAs.setWordWrap(true);
+				
+				Image profilePix = new Image();
+				profilePix.setUrl(commentor.getProfileImageURL());
+				profilePix.setWidth(String.valueOf(this.commentorProfilePixSize));
+				profilePix.setHeight(String.valueOf(this.commentorProfilePixSize));
+				profilePixPanel.add(profilePix);
+				
+				
+				Button postButton = new Button("Post!");
+				postButton.addClickHandler(new ClickHandler() {
+					
+					@Override
+					public void onClick(ClickEvent event) {
+						// TODO Auto-generated method stub
+						CommentPostingServiceAsync commentPostingService = GWT.create(CommentPostingService.class);
+						CommentDto commentDto = new CommentDto();
+						commentDto.setCommentorDto(commentor);
+						Date date = new Date();
+						commentDto.setDate(date);
+						commentDto.setStatusId(getStatusId());
+						commentDto.setText(commentBox.getText());
+						commentPostingService.addComment(commentDto, new AsyncCallback<Boolean>() {
+							
+							@Override
+							public void onSuccess(Boolean result) {
+								// TODO Auto-generated method stub
+								commentBox.setText("");
+								update();
+							}
+							
+							@Override
+							public void onFailure(Throwable caught) {
+								// TODO Auto-generated method stub
+								
+							}
+						});
+					
+					}
+				});
+				
+				commentorProfilePanel.insert(postAs, 0);
+				commentorProfilePanel.insert(profilePixPanel, 0);
+				commentorProfilePanel.addStyleName("postProfile");
+				//commentDropDown.getLoginPanel().add(postAs);
+				contentPanel.remove(signInPanel);
+				//commentDropDown.getDropDown().insert(commentDropDown.getLoginPanel(), 1);
+				contentPanel.add(postButton);
+			}
+
+			
+			
+
+			private void setDimension(){
+				this.width = tweetsWidth;	
+				
+				this.commentorProfilePixSize=(width/4.0>48)?48:width/4.0;
+				this.commentsWidth=this.width-commentorProfilePixSize;
+				
+				this.logonWidth=(this.width/this.noTypeLogOn>90)?90:this.width/this.noTypeLogOn;
+			}
+			
+			private VerticalPanel createCommentorProfilePixPanel(CommentDto commentDto){
+				 VerticalPanel commentorProfilePixPanel = new VerticalPanel();
+				 Image profilePix = new Image(commentDto.getCommentorDto().getProfileImageURL());
+				 profilePix.setWidth(String.valueOf(this.commentorProfilePixSize));
+				 commentorProfilePixPanel.add(profilePix);
+				 return commentorProfilePixPanel;
+				 
+			}
+			
+			private VerticalPanel createCommentsPanel(CommentDto commentDto){
+				VerticalPanel commentsPanel = new VerticalPanel();
+				
+				Label name = new Label(commentDto.getCommentorDto().getName());
+				name.setWordWrap(true);
+				name.setWidth(String.valueOf(this.commentsWidth));
+				
+				Label commentsText = new Label();
+				commentsText.setText(commentDto.getText());
+				commentsText.setWidth(String.valueOf(commentsWidth));
+				commentsText.setWordWrap(true);
+				
+				
+				DateTimeFormat dateTimeFormat = DateTimeFormat.getFormat("yyyy.MM.dd 'at' HH:mm:ss");
+				Label dateCommented = new Label(dateTimeFormat.format(commentDto.getDate()));
+				dateCommented.setWidth(String.valueOf(commentsWidth));
+				dateCommented.setWordWrap(true);
+				
+				
+				commentsPanel.add(name);
+				commentsPanel.add(dateCommented);
+				commentsPanel.add(commentsText);
+				
+				return commentsPanel;
+			}
+			
+						
 			private void createCommentBox(){
+				this.commentBox.setWidth(String.valueOf(tweetsWidth));
 				this.getCommentBox().setText("");
 				this.getCommentBox().setVisibleLines(3);
 				
 			}
 			
 			private void createSignInPanel(){
-				PushButton twitterLoginButton = new PushButton(new Image("/images/twitterSignIn.png"));
+				//this.signInPanel.setWidth(String.valueOf(tweetsWidth));
+				Image twitterSignInImage = new Image("/images/twitterSignIn.png");
+				twitterSignInImage.setWidth(String.valueOf(this.logonWidth));
+				PushButton twitterLoginButton = new PushButton(twitterSignInImage);
 				twitterLoginButton.addClickHandler(new ClickHandler(){
 
 					public void onClick(ClickEvent event) {
@@ -453,7 +444,9 @@ public class User implements EntryPoint {
 				}
 				
 				);
-				PushButton facebookLoginButton = new PushButton(new Image("/images/facebookSignIn.gif"));
+				Image facebookSignInImage = new Image("/images/facebookSignIn.gif");
+				facebookSignInImage.setWidth(String.valueOf(this.logonWidth));
+				PushButton facebookLoginButton = new PushButton(facebookSignInImage);
 				facebookLoginButton.addClickHandler(new ClickHandler(){
 
 					@Override
@@ -484,62 +477,53 @@ public class User implements EntryPoint {
 			}
 
 
-			public HorizontalPanel getPostingArea() {
-				return postingArea;
-			}
+			public void update(){
+				CommentPostingServiceAsync commentPostingService =GWT.create(CommentPostingService.class);
+				commentPostingService.getComments(statusId, new AsyncCallback<ArrayList<CommentDto>>(){
 
-			public void setPostingPanelLeftColumnWidth(
-					int postingPanelLeftColumnWidth) {
-				this.postingPanelLeftColumnWidth = postingPanelLeftColumnWidth;
-			}
+					@Override
+					public void onFailure(Throwable caught) {
+						// TODO Auto-generated method stub
+						
+					}
 
-			public double getPostingPanelLeftColumnWidth() {
-				return postingPanelLeftColumnWidth;
-			}
+					@Override
+					public void onSuccess(ArrayList<CommentDto> result) {
+						// TODO Auto-generated method stub
+						int i=comments.size();
+						if(result.size()==0){
+							commentDropDown.getHeaderTextAccessor().setText("Be the first to comment!");
+						}
+						else{
+							commentDropDown.getHeaderTextAccessor().setText(result.size()+" Comments!");
+						}
+						for (final CommentDto commentDto: result){
+							if(!comments.contains(commentDto.getId())){
+								HorizontalPanel commentContainerPanel = new HorizontalPanel();
+								VerticalPanel commentorProfilePixPanel = createCommentorProfilePixPanel(commentDto);
+								VerticalPanel commentsPanel = createCommentsPanel(commentDto);
+								
+								commentContainerPanel.add(commentorProfilePixPanel);
+								commentContainerPanel.add(commentsPanel);
+								
+								getCommentTable().insertRow(i);
+								getCommentTable().setWidget(i, 0, commentContainerPanel);
+								getCommentTable().getCellFormatter().addStyleName(i, 0, "commentBox");
+								getCommentTable().getCellFormatter().setWidth(i, 0, String.valueOf(tweetsWidth));
+								comments.add(commentDto.getId());
+								i++;
+							}
+							
+							
+						}
+						
+					}
 
-			public void setPostingPanelMiddleColumnWidth(
-					double postingPanelMiddleColumnWidth) {
-				this.postingPanelMiddleColumnWidth = postingPanelMiddleColumnWidth;
-			}
-
-			public double getPostingPanelMiddleColumnWidth() {
-				return postingPanelMiddleColumnWidth;
-			}
-
-			public void setPostingPanelRightColumnWidth(
-					double postingPanelRightColumnWidth) {
-				this.postingPanelRightColumnWidth = postingPanelRightColumnWidth;
-			}
-
-			public double getPostingPanelRightColumnWidth() {
-				return postingPanelRightColumnWidth;
-			}
-
-			public void setLogonWidth(double logonWidth) {
-				this.logonWidth = logonWidth;
-			}
-
-			public double getLogonWidth() {
-				return logonWidth;
-			}
-
-			public void setPostingPanelImageProfileWidth(
-					double postingPanelImageProfileWidth) {
-				this.postingPanelImageProfileWidth = postingPanelImageProfileWidth;
+					
+				});
+				
 			}
 			
-			public double getPostingPanelImageProfileWidth() {
-				return postingPanelImageProfileWidth;
-			}
-			
-			public double getCommentImageProfilePixWidth(){
-				return this.commentImageProfilePixWidth;
-			}
-			
-			public void  setCommentImageProfilePixWidth(double commentImageProfilePixWidth){
-				this.commentImageProfilePixWidth=commentImageProfilePixWidth;
-			}
-
 			
 		}
 
