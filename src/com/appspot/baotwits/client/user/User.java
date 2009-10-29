@@ -104,6 +104,7 @@ public class User implements EntryPoint {
 	private void setDimension(){
 		//leaving width for scrollbar
 		int width = Window.getClientWidth()-40;
+		this.debug("width is "+width);
 		this.imageProfileSize = ((width/4.0))<48?width/4.0:48;
 		this.tweetsWidth=width-this.imageProfileSize;
 	}

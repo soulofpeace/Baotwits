@@ -15,6 +15,6 @@
   <body class="bodyBg">
     <iframe src="javascript:''" id="__gwt_historyFrame" tabIndex='-1' style="position:absolute;width:0;height:0;border:0"></iframe>
      <input type="hidden" id="userId" value="<c:out value='${userId}'/>"/>
-	<div id="displayTwits"></div>
+	<div id="displayTwits" style="width:700px;"></div>
   </body>
 </html>
