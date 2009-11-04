@@ -50,7 +50,9 @@ public class User implements EntryPoint {
 	private double imageProfileSize;
 	//tweets width
 	private double tweetsWidth;
-	private Label debugLabel = new Label();
+	private static Label debugLabel = new Label();
+	
+	private CommentorDto loginCommentor;
 
 	public double getImageProfileSize(){
 		return this.imageProfileSize;
@@ -65,17 +67,19 @@ public class User implements EntryPoint {
 		this.defineUpdateLogin();
 		this.setDimension();
 		
-		String userId = this.getById("userId");
-		this.loadOwnStatuses(userId);
-		
-		mainPanel.add(debugLabel);
+		if(isDebug()){
+			debugLabel.setWidth(String.valueOf(imageProfileSize+tweetsWidth));
+			mainPanel.add(debugLabel);
+		}
+		this.initialiseStatuses();
 		RootPanel.get("displayTwits").add(mainPanel);	
 		
-		updateLogin();
 	}
 	
 	
+	
 	public static void updateLogin(){
+		User.debug("in Update login method");
 		CommentLoginServiceAsync  commentLoginService = GWT.create(CommentLoginService.class);
 		commentLoginService.getUserLogin(new AsyncCallback<CommentorDto>(){
 
@@ -87,8 +91,10 @@ public class User implements EntryPoint {
 			public void onSuccess(final CommentorDto commentor){
 				// TODO Auto-generated method stub
 				if (commentor==null){
+					User.debug("Commentor is null");
 					return;
 				}
+				User.debug("Commentor is "+commentor.getName());
 				Collection<CommentDropDown> c = statusCommentHash.values();
 				Iterator<CommentDropDown> iter = c.iterator();
 				while(iter.hasNext()){
@@ -99,6 +105,44 @@ public class User implements EntryPoint {
 			}
 			
 		});
+	}
+	
+	
+	public void setLoginCommentor(CommentorDto loginCommentor) {
+		this.loginCommentor = loginCommentor;
+	}
+
+	public CommentorDto getLoginCommentor() {
+		return loginCommentor;
+	}
+
+	
+	private void initialiseStatuses(){
+		User.debug("In Initialise Status");
+		CommentLoginServiceAsync  commentLoginService = GWT.create(CommentLoginService.class);
+		commentLoginService.getUserLogin(new AsyncCallback<CommentorDto>(){
+
+			@Override
+			public void onFailure(Throwable caught) {
+				// TODO Auto-generated method stub
+				String userId = getById("userId");
+				loadOwnStatuses(userId);
+			}
+
+			public void onSuccess(final CommentorDto commentor){
+				// TODO Auto-generated method stub
+				if (commentor==null){
+					User.debug("Commentor is null");
+				}
+				else{
+					User.debug("COmmentor is "+commentor.getName());
+					loginCommentor = commentor;
+				}
+				String userId = getById("userId");
+				loadOwnStatuses(userId);
+			}
+		});
+		
 	}
 
 	private void setDimension(){
@@ -114,14 +158,20 @@ public class User implements EntryPoint {
 	}-*/;
 	
 	private native String getById(String id) /*-{
-     	var element = $doc.getElementById(id);
-     	if (element == null)
-         	return "";
-     	return $doc.getElementById(id).value;
- 	}-*/;
-	 
-	 
+ 	var element = $doc.getElementById(id);
+ 	if (element == null)
+     	return "";
+ 	return $doc.getElementById(id).value;
+	}-*/;
+ 
+	
+	private boolean isDebug(){
+		String value = this.getById("debug");
+		return value.equals("true")?true:false;
+	}
+	
 	private void loadOwnStatuses(String userId){
+			User.debug("In load own status");
 			TwitTwitServiceAsync twittwitService = GWT.create(TwitTwitService.class);
 			twittwitService.getOwnStatuses(userId, new AsyncCallback<ArrayList<StatusDto>>() {
 				public void onSuccess(ArrayList<StatusDto> result) {
@@ -140,6 +190,9 @@ public class User implements EntryPoint {
 								statusesTable.getCellFormatter().setWidth(count, 1, String.valueOf(tweetsWidth));
 								count++;
 								CommentDropDown commentDropDown = new CommentDropDown(String.valueOf(status.getId()));
+								if(loginCommentor!=null){
+									commentDropDown.createCommentorProfilePanel(loginCommentor);
+								}
 								statusCommentHash.put(status.getId(), commentDropDown);
 								statusesTable.setWidget(count, 1, commentDropDown );
 								statusesTable.getFlexCellFormatter().setColSpan(count, 1, 2);
@@ -203,15 +256,18 @@ public class User implements EntryPoint {
 			return vp2;
 		}
 		
-		private void debug(String text){
-			String original=this.debugLabel.getText();
+		private static void debug(String text){
+			String original=debugLabel.getText();
 			original+=text;
-			this.debugLabel.setText(original);
+			debugLabel.setText(original);
 		}
 		
 		
 		
-		
+	
+
+
+
 		private class CommentDropDown extends VerticalPanel{
 			
 			private final DisclosurePanel commentDropDown = new DisclosurePanel("Click to Comment");

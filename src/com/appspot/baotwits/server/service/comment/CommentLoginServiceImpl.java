@@ -94,7 +94,7 @@ public class CommentLoginServiceImpl extends RemoteServiceServlet implements Com
 	@Override
 	public CommentorDto getUserLogin() {
 		// TODO Auto-generated method stub
-		logger.info("CommentorId is "+(String)this.getSession().getAttribute("commentorId"));
+		logger.info("Choon Kee CommentorId is "+(String)this.getSession().getAttribute("commentorId"));
 		if(this.getSession().getAttribute("commentorId")!=null){
 			String commentorId = (String)this.getSession().getAttribute("commentorId");
 			return this.getCommentor(KeyFactory.stringToKey(commentorId));
