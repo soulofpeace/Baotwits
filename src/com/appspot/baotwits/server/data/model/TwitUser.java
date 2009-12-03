@@ -7,6 +7,8 @@ import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
 
 import twitter4j.http.AccessToken;
+
+import com.appspot.baotwits.server.data.model.facebook.FacebookUser;
 import com.google.appengine.api.users.User;
 
 @PersistenceCapable(identityType = IdentityType.APPLICATION)
@@ -24,6 +26,7 @@ public class TwitUser {
 	
 	@Persistent
 	private User user;
+	
 	
 	public void setId(Long id) {
 		this.id = id;
@@ -68,6 +71,7 @@ public class TwitUser {
 	public User getUser() {
 		return user;
 	}
+
 
 
 }

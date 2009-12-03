@@ -4,12 +4,16 @@
     "http://java.sun.com/dtd/web-app_2_3.dtd">
 
 <web-app>
+   <filter> 
+    <filter-name>FacebookUserFilter</filter-name>
+    <filter-class>com.appspot.baotwits.server.controller.facebook.filter.FacebookUserFilter</filter-class>
+    <init-param></init-param>
+   </filter>
   
-  <!-- Servlets -->
-  <!--  <servlet>
-    <servlet-name>LoginServlet</servlet-name>
-    <servlet-class>com.appspot.baotwits.server.servlet.LoginServlet</servlet-class>
-  </servlet>-->
+  <filter-mapping>
+    <filter-name>FacebookUserFilter</filter-name>
+    <url-pattern>/facebook/</url-pattern>
+  </filter-mapping> 
   
   <servlet>
   	<servlet-name>baosDispatcher</servlet-name>
@@ -22,11 +26,6 @@
   	<url-pattern>/*</url-pattern>
   </servlet-mapping>
   
-  
-  <!-- <servlet-mapping>
-    <servlet-name>LoginServlet</servlet-name>
-    <url-pattern>/login</url-pattern>
-  </servlet-mapping>-->
   
   <!-- Default page to serve -->
   <welcome-file-list>
