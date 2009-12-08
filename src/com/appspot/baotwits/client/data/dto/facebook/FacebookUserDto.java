@@ -4,9 +4,9 @@ import java.util.ArrayList;
 
 public class FacebookUserDto {
 	private String key;
-	private String facebookId;
 	private String twitterUser;
 	private String twitterLoginURL;
+	private FacebookUserInfo facebookUserInfo;
 	
 	private ArrayList<StatusDto> statuses;
 	
@@ -16,12 +16,7 @@ public class FacebookUserDto {
 	public String getKey() {
 		return key;
 	}
-	public void setFacebookId(String facebookId) {
-		this.facebookId = facebookId;
-	}
-	public String getFacebookId() {
-		return facebookId;
-	}
+	
 	public void setTwitterUser(String twitterUser) {
 		this.twitterUser = twitterUser;
 	}
@@ -41,4 +36,11 @@ public class FacebookUserDto {
 	public String getTwitterLoginURL() {
 		return twitterLoginURL;
 	}
+	public void setFacebookUserInfo(FacebookUserInfo facebookUserInfo) {
+		this.facebookUserInfo = facebookUserInfo;
+	}
+	public FacebookUserInfo getFacebookUserInfo() {
+		return facebookUserInfo;
+	}
 }
+

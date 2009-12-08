@@ -11,6 +11,7 @@ import javax.jdo.Transaction;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
+import com.appspot.baotwits.server.data.model.TwitterUser;
 import com.appspot.baotwits.server.data.model.facebook.FacebookUser;
 import com.google.appengine.api.datastore.KeyFactory;
 
@@ -54,6 +55,32 @@ public class FacebookUserDaoImpl implements FacebookUserDao {
 		        pm.close();
 		    }
 	}
+	
+	public void setTwitterUser(FacebookUser facebookUser, TwitterUser twitterUser){
+		PersistenceManager pm = pmf.getPersistenceManager();
+		Transaction tnx =pm.currentTransaction();
+		try{
+			tnx.begin();
+			logger.info(KeyFactory.keyToString(facebookUser.getKey()));
+			twitterUser.setFacebookUserKey(facebookUser.getKey());
+			twitterUser = pm.makePersistent(twitterUser);
+			facebookUser.setTwitterUserKey(twitterUser.getKey());
+			pm.makePersistent(facebookUser);
+			tnx.commit();
+		}
+		catch(Exception ex){
+			ex.printStackTrace();
+			logger.warning(ex.getMessage());
+			for(StackTraceElement element: ex.getStackTrace()){
+				logger.warning(element.getFileName()+"::"+element.getClassName()+"::"+element.getMethodName()+"::"+element.getLineNumber());
+			}
+		}finally{
+			if(tnx.isActive()){
+				tnx.rollback();
+			}
+			pm.close();
+		}
+	}
 
 	@Override
 	public FacebookUser getFacebookUserbyFID(String fid) {
@@ -79,5 +106,7 @@ public class FacebookUserDaoImpl implements FacebookUserDao {
 			
 		}
 	}
+	
+	
 
 }

@@ -6,7 +6,8 @@
         http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
 
 	<context:component-scan base-package="com.appspot.baotwits" />
-
+	
+	<bean id="facebookRest" class="com.appspot.baotwits.server.util.facebook.FacebookRest"/>
 	<bean id="persistenceManagerFactory" factory-bean="PMF" factory-method="persistenceManagerFactory" />
 	<bean class="org.springframework.web.servlet.mvc.annotation.DefaultAnnotationHandlerMapping">
 		<property name="alwaysUseFullPath" value="false"/>
@@ -117,5 +118,12 @@
   		</property>
 	</bean>
 	
+	<bean id="restTemplate" class="org.springframework.web.client.RestTemplate">
+		<property name="messageConverters">
+			<list>
+				<bean class="org.springframework.http.converter.json.MappingJacksonHttpMessageConverter"/>
+			</list>
+		</property>
+	</bean>
 </beans>
   

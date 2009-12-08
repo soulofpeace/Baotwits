@@ -3,6 +3,7 @@ package com.appspot.baotwits.server.controller.facebook;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -24,14 +25,17 @@ import twitter4j.TwitterException;
 import twitter4j.http.AccessToken;
 import twitter4j.http.RequestToken;
 
+import com.appspot.baotwits.client.data.dto.facebook.FacebookUserInfo;
 import com.appspot.baotwits.client.data.dto.facebook.StatusDto;
 import com.appspot.baotwits.client.data.dto.facebook.FacebookUserDto;
+import com.appspot.baotwits.server.constants.facebook.FacebookConstants;
 import com.appspot.baotwits.server.constants.facebook.TwitterConstants;
 import com.appspot.baotwits.server.data.dao.TwitterUserDao;
 import com.appspot.baotwits.server.data.dao.facebook.FacebookUserDao;
 import com.appspot.baotwits.server.data.model.TwitUser;
 import com.appspot.baotwits.server.data.model.TwitterUser;
 import com.appspot.baotwits.server.data.model.facebook.FacebookUser;
+import com.appspot.baotwits.server.util.facebook.FacebookParam;
 import com.appspot.baotwits.server.util.facebook.FacebookRest;
 import com.google.appengine.api.datastore.KeyFactory;
 import com.google.appengine.api.users.User;
@@ -47,9 +51,19 @@ public class BaotwitsFacebookController {
 	@Autowired
 	private TwitterUserDao twitterUserDao;
 	
+	@Autowired
+	private FacebookRest facebookRest;
+	
 	@RequestMapping(value="/facebook", method=RequestMethod.GET)
 	public String show(HttpServletRequest request, Model model){
+		Enumeration<String> parameterNames = request.getParameterNames();
+		while(parameterNames.hasMoreElements()){
+			logger.info("Parameter Name: "+parameterNames.nextElement());
+		}
 		String facebookUserId = request.getParameter("fb_sig_user");
+		FacebookUserInfo facebookUserInfo = this.facebookRest.getFacebookUserInfo(request.getParameter(FacebookParam.USER.toString()), request.getParameter(FacebookParam.SESSION_KEY.toString()));
+		
+		logger.info(facebookUserInfo.getName());
 		if(this.isFirstTimeUser(facebookUserId)){
 			logger.info("adding " + facebookUserId);	
 			this.saveUser(facebookUserId);
@@ -69,12 +83,13 @@ public class BaotwitsFacebookController {
 		FacebookUser facebookUser = facebookUserDao.getFacebookUserbyFID(facebookUserId);
 		this.linkTwitterUsertoFacebookUser(requestToken, facebookUser);
 		logger.info("redirecting");
-		return "redirect:/facebook";
+		model.addAttribute("url", FacebookConstants.getCanvasURL());
+		return "afterTwitterLogin";
 	}
 	
 	@RequestMapping(value="/facebook/login", method=RequestMethod.GET)
 	public String login(Model model){
-		model.addAttribute("url", FacebookRest.getFacebookCanvasLoginURL());
+		model.addAttribute("url", facebookRest.getFacebookCanvasLoginURL());
 		return "facebookLogin";
 	}
 	
@@ -85,7 +100,6 @@ public class BaotwitsFacebookController {
 		logger.info("User found is "+facebookUser.getFacebookId());
 		FacebookUserDto facebookUserDto = new FacebookUserDto();
 		facebookUserDto.setKey(KeyFactory.keyToString(facebookUser.getKey()));
-		facebookUserDto.setFacebookId(facebookUser.getFacebookId());
 		facebookUserDto.setTwitterUser(facebookUser.getTwitterUserKey()!=null?KeyFactory.keyToString(facebookUser.getTwitterUserKey()):null);
 		facebookUserDto.getTwitterLoginURL();
 		request.getSession().setAttribute("facebookUserId", userId);
@@ -101,6 +115,9 @@ public class BaotwitsFacebookController {
 		}
 			
 		facebookUserDto.setStatuses(statuses); 
+		FacebookUserInfo facebookUserInfo = this.facebookRest.getFacebookUserInfo(request.getParameter(FacebookParam.USER.toString()), request.getParameter(FacebookParam.SESSION_KEY.toString()));
+		logger.info("facebookUserInfo name "+facebookUserInfo.getName());
+		facebookUserDto.setFacebookUserInfo(facebookUserInfo);
 		return facebookUserDto;
 	}
 	
@@ -115,16 +132,39 @@ public class BaotwitsFacebookController {
 			
 	}
 	
-
-	public void updateStatus(String status, FacebookUser facebookUser) {
+	@RequestMapping(value="/facebook/user/{userId}/{status}", method=RequestMethod.POST)
+	public FacebookUserDto updateStatus(@PathVariable String status, @PathVariable String userId, HttpServletRequest request) {
 		// TODO Auto-generated method stub
+		FacebookUser facebookUser = this.facebookUserDao.getFacebookUserbyFID(userId);
 		Twitter twitter = this.getTwitterUser(twitterUserDao.getTwitterUser(KeyFactory.keyToString(facebookUser.getTwitterUserKey())));
 		try {
 			twitter.updateStatus(status);
+			
 		} catch (TwitterException e) {
 			// TODO Auto-generated catch block
 			logger.warning("Unable to update status for "+ facebookUser.getFacebookId());
 		}
+		FacebookUserDto facebookUserDto = new FacebookUserDto();
+		facebookUserDto.setKey(KeyFactory.keyToString(facebookUser.getKey()));
+		facebookUserDto.setTwitterUser(facebookUser.getTwitterUserKey()!=null?KeyFactory.keyToString(facebookUser.getTwitterUserKey()):null);
+		facebookUserDto.getTwitterLoginURL();
+		request.getSession().setAttribute("facebookUserId", userId);
+		ArrayList<StatusDto> statuses = new ArrayList();
+		if (facebookUser.getTwitterUserKey()!=null){
+			logger.info("Loading statuses");
+			statuses = this.getStatuses(facebookUser);
+		}
+		else{
+			logger.info("Getting authenticationURL");
+			facebookUserDto.setTwitterLoginURL(this.getTwitAuthorizationLoginURL(request.getSession()));
+			
+		}
+			
+		facebookUserDto.setStatuses(statuses); 
+		FacebookUserInfo facebookUserInfo = this.facebookRest.getFacebookUserInfo(request.getParameter(FacebookParam.USER.toString()), request.getParameter(FacebookParam.SESSION_KEY.toString()));
+		logger.info("facebookUserInfo name "+facebookUserInfo.getName());
+		facebookUserDto.setFacebookUserInfo(facebookUserInfo);
+		return facebookUserDto;
 		
 	}
 
@@ -253,8 +293,9 @@ public class BaotwitsFacebookController {
 			twitter.setOAuthConsumer(TwitterConstants.getConsumerKey(), TwitterConstants.getConsumerSecret());
 			twitter.setOAuthAccessToken(accessToken);
 			int twitterId=twitter.verifyCredentials().getId();
+			logger.info("Twitter User Id "+twitterId);
 			twitterUser.setTwitUserId(String.valueOf(twitterId));
-			facebookUserDao.saveFacebookUser(facebookUser);
+			facebookUserDao.setTwitterUser(facebookUser, twitterUser);
 			
 			//twitterUserDao.saveTwitterUser(twitterUser);
 			
