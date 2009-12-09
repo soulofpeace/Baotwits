@@ -95,8 +95,10 @@ public class BaotwitsFacebookController {
 	
 	@RequestMapping(value="/facebook/user/{userId}", method=RequestMethod.GET)
 	public FacebookUserDto getUser(@PathVariable String userId, Model model, HttpServletRequest request){
+		/**
 		FacebookUser facebookUser = facebookUserDao.getFacebookUserbyFID(userId);
 		logger.info("User found is "+facebookUser.getFacebookId());
+	
 		FacebookUserDto facebookUserDto = new FacebookUserDto();
 		facebookUserDto.setKey(KeyFactory.keyToString(facebookUser.getKey()));
 		facebookUserDto.setTwitterUser(facebookUser.getTwitterUserKey()!=null?KeyFactory.keyToString(facebookUser.getTwitterUserKey()):null);
@@ -115,8 +117,11 @@ public class BaotwitsFacebookController {
 			
 		facebookUserDto.setStatuses(statuses); 
 		FacebookUserInfo facebookUserInfo = this.facebookRest.getFacebookUserInfo(request.getParameter(FacebookParam.USER.toString()), request.getParameter(FacebookParam.SESSION_KEY.toString()));
+		
 		logger.info("facebookUserInfo name "+facebookUserInfo.getName());
 		facebookUserDto.setFacebookUserInfo(facebookUserInfo);
+		**/
+		FacebookUserDto facebookUserDto = this.facebookRest.getFacebookUserDto(userId,  request.getParameter(FacebookParam.SESSION_KEY.toString()));
 		return facebookUserDto;
 	}
 	
