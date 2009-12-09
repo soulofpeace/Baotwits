@@ -1,14 +1,21 @@
 package com.appspot.baotwits.server.util.facebook;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import javax.servlet.http.HttpServletRequest;
@@ -92,6 +99,44 @@ public class FacebookRest {
 		
 	}
 	
+	public void getFriends(String uid, String sessionId){
+		ParamsMap paramsMap = new ParamsMap();
+		paramsMap.put("method", "FQL.multiquery" );
+		paramsMap.put("api_key", FacebookConstants.getFacebookAPIKey());
+		paramsMap.put("call_id", String.valueOf(new Date().getTime()));
+		paramsMap.put("v","1.0");
+		paramsMap.put("session_key", sessionId);
+		paramsMap.put("format", "JSON");
+		paramsMap.put("queries", "{\"friends\":\"SELECT uid, name, pic_square FROM user WHERE uid in (SELECT uid2 FROM friend where uid1="+uid+") and is_app_user=1\", \"user\": \"select uid, name, pic_square from user where uid ="+uid+"\"}");
+		/*String methodParam="method::FQL.multiquery";
+		String apiKeyParam="api_key::"+FacebookConstants.getFacebookAPIKey();
+		Date currentDate = new Date();
+		logger.info("Current time is"+currentDate.getTime());
+		String callIdParam="call_id::"+currentDate.getTime();
+		String versionParam="v::1.0";
+		String sessionKeyParam="session_key::"+sessionId;
+		String formatParam="format::JSON";
+		String queryParam="queries::{\"friends\":\"SELECT uid, name, pic_square FROM user WHERE uid in (SELECT uid2 FROM friend where uid1="+uid+")\", \"user\": \"select uid, name, pic_square from user where uid ="+uid+"\"}";
+		ArrayList<String> params = new ArrayList();
+		params.add(methodParam);
+		params.add(apiKeyParam);
+		params.add(callIdParam);
+		params.add(versionParam);
+		params.add(sessionKeyParam);
+		params.add(formatParam);
+		params.add(queryParam);
+		*/
+		
+		String sigParam="sig::"+FacebookSignatureUtil.generateSignature(paramsMap.toSignatureArray(), FacebookConstants.getFacebookApplicationKey());
+		paramsMap.put("sig",FacebookSignatureUtil.generateSignature(paramsMap.toSignatureArray(), FacebookConstants.getFacebookApplicationKey()));
+		String urlString = "http://api.facebook.com/restserver.php?"+paramsMap.toURLString();
+		logger.info("UserInfoURL is"+urlString);
+		String result = this.getJSONURLResponse(urlString);
+		logger.info("result: "+result);
+		
+		
+	}
+	
 	public FacebookUserInfo getFacebookUserInfo(String uid, String sessionId){
 		
 		String methodParam="method=users.getInfo";
@@ -151,5 +196,68 @@ public class FacebookRest {
 	
 	private Map<String,String[]> getRequestParameterMap( HttpServletRequest request ) {
 		return (Map<String,String[]>) request.getParameterMap();
+	}
+	
+	private String getJSONURLResponse(String urlString){
+		try {
+			URL url = new URL(urlString);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setDoOutput(true);
+            connection.setRequestMethod("GET");
+            String line;
+            String output="";
+            BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            while ((line = reader.readLine()) != null) {
+            	output+=line;
+            }
+            return output;
+        } catch (MalformedURLException e) {
+            logger.warning(e.getMessage());
+            return null;
+        } catch (IOException e) {
+            logger.warning(e.getMessage());
+            return null;
+        }
+		
+	}
+}
+
+class ParamsMap extends HashMap<String, String>{
+	
+	public ParamsMap(){
+		super();
+	}
+	
+	public ArrayList<String> toSignatureArray(){
+		Set<String> keys=this.keySet();
+		ArrayList<String> params = new ArrayList<String>();
+		for (String key: keys){
+			String param = key+"="+this.get(key);
+			params.add(param);
+		}
+		return params;
+	}
+	
+	public String toURLString(){
+		try{
+			Set<String> keys=this.keySet();
+			String params = "";
+			int count = this.size();
+			for (String key: keys){
+				String param = key+"="+URLEncoder.encode(this.get(key), "UTF-8");
+				if(count>1){
+					params+=param+"&";
+				}
+				else{
+					params+= param;
+				}
+			}
+			return params;
+		}
+		catch(UnsupportedEncodingException e){
+			e.printStackTrace();
+			return null;
+		}
+		
 	}
 }

@@ -61,9 +61,8 @@ public class BaotwitsFacebookController {
 			logger.info("Parameter Name: "+parameterNames.nextElement());
 		}
 		String facebookUserId = request.getParameter("fb_sig_user");
-		FacebookUserInfo facebookUserInfo = this.facebookRest.getFacebookUserInfo(request.getParameter(FacebookParam.USER.toString()), request.getParameter(FacebookParam.SESSION_KEY.toString()));
+		facebookRest.getFriends(request.getParameter(FacebookParam.USER.toString()), request.getParameter(FacebookParam.SESSION_KEY.toString()));
 		
-		logger.info(facebookUserInfo.getName());
 		if(this.isFirstTimeUser(facebookUserId)){
 			logger.info("adding " + facebookUserId);	
 			this.saveUser(facebookUserId);

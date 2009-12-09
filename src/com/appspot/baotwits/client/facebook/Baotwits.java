@@ -29,6 +29,7 @@ import com.google.gwt.user.client.ui.Image;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.PushButton;
 import com.google.gwt.user.client.ui.RootPanel;
+import com.google.gwt.user.client.ui.TabPanel;
 import com.google.gwt.user.client.ui.TextArea;
 import com.google.gwt.user.client.ui.VerticalPanel;
 import com.google.gwt.http.client.*;
@@ -52,6 +53,10 @@ public class Baotwits implements EntryPoint {
 	private Button tweetButton = new Button();
 	private Label charRemain = new Label();
 	private Label welcomeMsg = new Label();
+	private VerticalPanel twitterPanel = new VerticalPanel();
+	private VerticalPanel ownTweetsPanel = new VerticalPanel();
+	private VerticalPanel friendsTweetsPanel = new VerticalPanel();
+	private TabPanel mainPanel = new TabPanel();
 	private Timer timer;
 	
 	private Map<String, List<String>> parameterMap;
@@ -67,6 +72,11 @@ public class Baotwits implements EntryPoint {
 		String facebookUserId = Window.Location.getParameter("fb_sig_user");
 		parameterMap = Window.Location.getParameterMap();
 		this.setFacebookUser(facebookUserId);
+		this.mainPanel.add(this.twitterPanel, "Tweet Tweet");
+		this.mainPanel.add(this.friendsTweetsPanel, "Friends Tweet");
+		this.mainPanel.add(this.ownTweetsPanel, "Own Tweet");
+		this.mainPanel.selectTab(0);
+		RootPanel.get().add(this.mainPanel);
 		
 		
 	}
@@ -88,29 +98,7 @@ public class Baotwits implements EntryPoint {
 						Baotwits.debug(json);
 						facebookUser=FacebookUser.fromJson(json);
 						Baotwits.debug("wahahaha"+facebookUser.getStatuses().length());
-						if(facebookUser.getStatuses().length()==0){
-							VerticalPanel setupPanel = new VerticalPanel();
-							Label setupLabel = new Label("Setup your twitter acoount");
-							Anchor twitterOauthLink = new Anchor("Click Here");
-							twitterOauthLink.setHref(facebookUser.getTwitterOauthLink());
-							setupPanel.add(setupLabel);
-							setupPanel.add(twitterOauthLink);
-							RootPanel.get().add(setupPanel);
-						}
-						else{
-							loadWelcomeMsg();
-							loadTweetPanel();
-							loadStatuses();
-							timer = new Timer() {
-								
-								@Override
-								public void run() {
-									// TODO Auto-generated method stub
-									updateFacebookUser();
-								}
-							};
-							timer.scheduleRepeating(300000);
-						}
+						setUpTweetsPanel();
 					}	
 				}
 				
@@ -125,6 +113,32 @@ public class Baotwits implements EntryPoint {
 		}
 		catch(RequestException ex){
 			
+		}
+	}
+	
+	private void setUpTweetsPanel(){
+		if(facebookUser.getStatuses().length()==0){
+			VerticalPanel setupPanel = new VerticalPanel();
+			Label setupLabel = new Label("Setup your twitter acoount");
+			Anchor twitterOauthLink = new Anchor("Click Here");
+			twitterOauthLink.setHref(facebookUser.getTwitterOauthLink());
+			setupPanel.add(setupLabel);
+			setupPanel.add(twitterOauthLink);
+			twitterPanel.add(setupPanel);
+		}
+		else{
+			loadWelcomeMsg();
+			loadTweetPanel();
+			loadStatuses();
+			timer = new Timer() {
+				
+				@Override
+				public void run() {
+					// TODO Auto-generated method stub
+					updateFacebookUser();
+				}
+			};
+			timer.scheduleRepeating(300000);
 		}
 	}
 	
@@ -181,7 +195,7 @@ public class Baotwits implements EntryPoint {
 		//signOutLink.setHref(loginInfo.getLogoutUrl());
 		horizontalPanel.add(welcomeMsg);
 		//horizontalPanel.add(signOutLink);
-		RootPanel.get().add(horizontalPanel);
+		twitterPanel.add(horizontalPanel);
 	}
 	
 	private void loadStatuses(){
@@ -230,7 +244,7 @@ public class Baotwits implements EntryPoint {
 					
 				
 		statusesTable.setStyleName("tweets");
-		RootPanel.get().add(statusesTable);
+		twitterPanel.add(statusesTable);
 	
 	}
 	
@@ -322,7 +336,7 @@ public class Baotwits implements EntryPoint {
 		auxPanel.add(tweetButton);
 		this.tweetPanel.add(auxPanel);
 		this.tweetPanel.add(charRemain);
-		RootPanel.get().add(tweetPanel);
+		twitterPanel.add(tweetPanel);
 		
 	}
 	
