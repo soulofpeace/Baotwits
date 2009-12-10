@@ -177,6 +177,7 @@ public class Baotwits implements EntryPoint {
 						String json = response.getText();
 						Baotwits.debug(json);
 						JsArray<Status> statuses = getOwnStatuses(json);
+						loadOwnStatuses(statuses);
 						
 					}	
 				}
