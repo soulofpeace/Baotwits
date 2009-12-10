@@ -85,6 +85,19 @@ public class TwitterRest {
 		}
 		
 	}
+	
+	public ArrayList<StatusDto> getUserStatuses(AccessToken accessToken){
+		Twitter twitter = this.getTwitterUser(accessToken);
+		try {
+			List<twitter4j.Status> statuses = twitter.getUserTimeline();
+			return this.getStatusDto(statuses);
+		} catch (TwitterException e) {
+			// TODO Auto-generated catch block
+			logger.warning("Unable to retrieve tweets for "+ accessToken.toString());
+		}
+		return null;
+	}
+	
 	private Twitter getTwitterUser(AccessToken accessToken){
 		Twitter twitter = new Twitter();
 		twitter.setOAuthConsumer(TwitterConstants.getConsumerKey(), TwitterConstants.getConsumerSecret());

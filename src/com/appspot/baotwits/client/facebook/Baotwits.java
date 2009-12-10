@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.google.gwt.core.client.EntryPoint;
+import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.JavaScriptObject;
 import com.google.gwt.core.client.JsArray;
 import com.google.gwt.event.dom.client.ClickEvent;
@@ -20,6 +21,7 @@ import com.google.gwt.event.dom.client.KeyUpHandler;
 import com.google.gwt.i18n.client.DateTimeFormat;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.Anchor;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.DisclosurePanel;
@@ -46,8 +48,9 @@ public class Baotwits implements EntryPoint {
 	private double tweetsWidth; 
 	
 	private FlexTable statusesTable = new FlexTable();
+	private FlexTable ownStatusesTable = new FlexTable();
 	private ArrayList<String> statuses = new ArrayList<String>();
-	private ArrayList<Status> newStatus = new ArrayList<Status>();
+	private ArrayList<String> ownStatus = new ArrayList<String>();
 	private VerticalPanel tweetPanel = new VerticalPanel();
 	private TextArea tweetBox = new TextArea();
 	private Button tweetButton = new Button();
@@ -72,6 +75,7 @@ public class Baotwits implements EntryPoint {
 		String facebookUserId = Window.Location.getParameter("fb_sig_user");
 		parameterMap = Window.Location.getParameterMap();
 		this.setFacebookUser(facebookUserId);
+		this.mainPanel.setWidth(String.valueOf(this.tweetsWidth+this.imageProfileSize));
 		this.mainPanel.add(this.twitterPanel, "Tweet Tweet");
 		this.mainPanel.add(this.friendsTweetsPanel, "Friends Tweet");
 		this.mainPanel.add(this.ownTweetsPanel, "Own Tweet");
@@ -140,6 +144,84 @@ public class Baotwits implements EntryPoint {
 			};
 			timer.scheduleRepeating(300000);
 		}
+	}
+	
+	private void setupOwnTweetPanel(){
+		this.updateOwnStatuses();
+		timer = new Timer() {
+			
+			@Override
+			public void run() {
+				// TODO Auto-generated method stub
+				updateOwnStatuses();
+			}
+		};
+		timer.scheduleRepeating(300000);
+		
+	}
+	
+	private void updateOwnStatuses(){
+		String url="http://baotwits.appspot.com/facebook/user/"+facebookUser.getFacebookUserInfo().getUid()+"/ownStatuses.json";
+		url=this.setfacebookRequestParameter(url);
+		RequestBuilder requestBuilder = new RequestBuilder(RequestBuilder.GET, URL.encode(url));
+		requestBuilder.setHeader("Content-Type", "application/json");
+		requestBuilder.setHeader("Content-Type", "application/json");
+		try{
+			Request request = requestBuilder.sendRequest(null, new RequestCallback() {
+				
+				@Override
+				public void onResponseReceived(Request request, Response response) {
+					Baotwits.debug("Hello receive some response here");
+					// TODO Auto-generated method stub
+					if(200==response.getStatusCode()){
+						String json = response.getText();
+						Baotwits.debug(json);
+						JsArray<Status> statuses = getOwnStatuses(json);
+						
+					}	
+				}
+				
+				@Override
+				public void onError(Request request, Throwable exception) {
+					// TODO Auto-generated method stub
+					
+				}
+			} 
+					
+			);
+		}
+		catch(RequestException ex){
+			
+		}
+	}
+	
+	private void loadOwnStatuses(JsArray<Status> statuses){
+		int rowCount=0;
+		for(int i=0; i<statuses.length();i++){
+			Status status = statuses.get(i);
+			if(!this.ownStatus.contains(status.getId())){
+				VerticalPanel vp1=createScreenNamePanel(status);
+				VerticalPanel vp2=createTweets(status);
+				ownStatusesTable.insertRow(rowCount);
+				ownStatusesTable.setWidget(rowCount, 0, vp1);
+				ownStatusesTable.setWidget(rowCount, 1, vp2);
+				ownStatusesTable.getRowFormatter().addStyleName(rowCount, "status");
+				ownStatusesTable.getCellFormatter().setWidth(rowCount, 0, String.valueOf(imageProfileSize));
+				ownStatusesTable.getCellFormatter().setWidth(rowCount, 1, String.valueOf(tweetsWidth));
+				rowCount++;
+				CommentDropDown commentDropDown = new CommentDropDown(String.valueOf(status.getId()));
+				ownStatusesTable.setWidget(rowCount, 1, commentDropDown );
+				ownStatusesTable.getFlexCellFormatter().setColSpan(rowCount, 1, 2);
+				rowCount++;
+				ownStatus.add(status.getId());
+			}
+			else{
+				break;
+			}
+			
+		}
+		statusesTable.setStyleName("tweets");
+		this.ownTweetsPanel.add(this.ownStatusesTable);
 	}
 	
 	private void updateFacebookUser(){
@@ -417,6 +499,176 @@ public class Baotwits implements EntryPoint {
 			
 		}
 		return url;
+		
+	}
+	
+	public final native JsArray<Status> getOwnStatuses(String json)/*-{alert(json);eval('('+json+')').statuses}-*/;
+
+	private class CommentDropDown extends VerticalPanel{
+		
+		private final DisclosurePanel commentDropDown = new DisclosurePanel("Click to Comment");
+		private final VerticalPanel contentPanel = new VerticalPanel();
+		private final FlexTable commentTable = new FlexTable();
+		private final TextArea commentBox = new TextArea();
+		private final HorizontalPanel commentorProfilePanel = new HorizontalPanel();
+		private Button postButton = new Button("Post!");
+		
+		private double commentorProfilePixSize;
+		private double commentsWidth;
+		private double width;
+		
+		private String statusId;
+		private final ArrayList<String> comments = new ArrayList<String>(); 
+		
+		public CommentDropDown(String statusId){
+			this.setDimension();
+			this.commentDropDown.setWidth(String.valueOf(tweetsWidth));
+			this.statusId = statusId;
+			this.retrieveCommentsForStatus();
+			this.createCommentorProfilePanel(facebookUser);
+			this.createCommentBox();
+			this.createPostButton();
+			
+			
+			this.commentDropDown.setContent(this.getContentPanel());
+			this.add(this.commentDropDown);
+			
+		}
+		
+		
+		public DisclosurePanel getCommentDropDown() {
+			return commentDropDown;
+		}
+		
+		public VerticalPanel getContentPanel() {
+			return contentPanel;
+		}
+		
+		public TextArea getCommentBox() {
+			return commentBox;
+		}
+		
+		public FlexTable getCommentTable() {
+			return commentTable;
+		}
+		
+
+		public String getStatusId(){
+			return this.statusId;
+		}
+		
+		public HorizontalPanel getCommentorProfilePanel() {
+			return commentorProfilePanel;
+		}		
+
+		
+		public double getCommentorProfilePixSize(){
+			return this.commentorProfilePixSize;
+		}
+		
+		public double getCommentsWidth(){
+			return this.commentsWidth;
+		}
+		
+		
+		
+		public void createCommentorProfilePanel(final FacebookUser facebookUser){
+			this.commentorProfilePanel.setWidth(String.valueOf(tweetsWidth));
+			VerticalPanel profilePixPanel = new VerticalPanel();
+			profilePixPanel.setWidth(String.valueOf(this.commentorProfilePixSize));
+			
+			Label postAs = new Label(facebookUser.getFacebookUserInfo().getName()+" Says");
+			postAs.setWidth(String.valueOf(this.commentsWidth));
+			postAs.setWordWrap(true);
+			
+			Image profilePix = new Image();
+			profilePix.setUrl(facebookUser.getFacebookUserInfo().getPicSquare());
+			profilePix.setWidth(String.valueOf(this.commentorProfilePixSize));
+			profilePix.setHeight(String.valueOf(this.commentorProfilePixSize));
+			profilePixPanel.add(profilePix);
+			
+			
+			
+			
+			
+			commentorProfilePanel.insert(postAs, 0);
+			commentorProfilePanel.insert(profilePixPanel, 0);
+			commentorProfilePanel.addStyleName("postProfile");
+			
+			this.contentPanel.add(this.getCommentorProfilePanel());
+			
+		}
+		
+		
+
+		private void createCommentBox(){
+			this.commentBox.setWidth(String.valueOf(tweetsWidth));
+			this.getCommentBox().setText("");
+			this.getCommentBox().setVisibleLines(3);
+			this.contentPanel.add(commentBox);
+		}
+		
+		private void retrieveCommentsForStatus(){
+			this.contentPanel.add(this.getCommentTable());
+		}
+		
+		private void createPostButton(){
+			postButton.addClickHandler(new ClickHandler() {
+				
+				@Override
+				public void onClick(ClickEvent event) {
+				}
+			});
+			this.contentPanel.add(postButton);
+		}
+		
+		private void setDimension(){
+			this.width = tweetsWidth;	
+			this.commentorProfilePixSize=(width/4.0>48)?48:width/4.0;
+			this.commentsWidth=this.width-commentorProfilePixSize;
+			
+		}
+		
+		/**
+		private VerticalPanel createCommentorProfilePixPanel(CommentDto commentDto){
+			 VerticalPanel commentorProfilePixPanel = new VerticalPanel();
+			 Image profilePix = new Image(commentDto.getCommentorDto().getProfileImageURL());
+			 profilePix.setWidth(String.valueOf(this.commentorProfilePixSize));
+			 commentorProfilePixPanel.add(profilePix);
+			 return commentorProfilePixPanel;
+			 
+		}
+		
+		private VerticalPanel createCommentsTextPanel(CommentDto commentDto){
+			VerticalPanel commentsPanel = new VerticalPanel();
+			
+			Label name = new Label(commentDto.getCommentorDto().getName());
+			name.setWordWrap(true);
+			name.setWidth(String.valueOf(this.commentsWidth));
+			
+			Label commentsText = new Label();
+			commentsText.setText(commentDto.getText());
+			commentsText.setWidth(String.valueOf(commentsWidth));
+			commentsText.setWordWrap(true);
+			
+			
+			DateTimeFormat dateTimeFormat = DateTimeFormat.getFormat("yyyy.MM.dd 'at' HH:mm:ss");
+			Label dateCommented = new Label(dateTimeFormat.format(commentDto.getDate()));
+			dateCommented.setWidth(String.valueOf(commentsWidth));
+			dateCommented.setWordWrap(true);
+			
+			
+			commentsPanel.add(name);
+			commentsPanel.add(dateCommented);
+			commentsPanel.add(commentsText);
+			
+			return commentsPanel;
+		}
+		
+		**/
+		
+		
+		
 		
 	}
 	

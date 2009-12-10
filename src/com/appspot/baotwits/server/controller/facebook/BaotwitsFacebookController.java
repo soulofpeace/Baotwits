@@ -150,6 +150,17 @@ public class BaotwitsFacebookController {
 			
 	}
 	
+	@RequestMapping(value="/facebook/user/{userId}/ownStatuses", method=RequestMethod.GET)
+	public ArrayList<StatusDto> getOwnStatuses(@PathVariable String userId, Model model){
+		FacebookUser facebookUser = facebookUserDao.getFacebookUserbyFID(userId);
+		ArrayList<StatusDto> statuses = new ArrayList();
+		if (facebookUser.getTwitterUserKey()!=null){
+			TwitterUser twitterUser= twitterUserDao.getTwitterUser(KeyFactory.keyToString(facebookUser.getTwitterUserKey()));
+			statuses = twitterRest.getUserStatuses(twitterUser.getAccessToken());
+		}
+		return statuses;
+	}
+	
 	@RequestMapping(value="/facebook/user/{userId}/{status}", method=RequestMethod.POST)
 	public FacebookUserDto updateStatus(@PathVariable String status, @PathVariable String userId, HttpServletRequest request) {
 		// TODO Auto-generated method stub

@@ -1,5 +1,7 @@
 package com.appspot.baotwits.server.data.model.facebook;
 
+import java.util.Set;
+
 import javax.jdo.annotations.IdGeneratorStrategy;
 import javax.jdo.annotations.IdentityType;
 import javax.jdo.annotations.PersistenceCapable;
@@ -21,6 +23,9 @@ public class FacebookUser {
 	
 	@Persistent(defaultFetchGroup = "true")
 	private Key twitterUserKey;
+	
+	@Persistent(defaultFetchGroup = "true")
+	private Set<Key> comments;
 
 	public void setKey(Key key) {
 		this.key = key;
@@ -46,6 +51,17 @@ public class FacebookUser {
 		return twitterUserKey;
 	}
 
+	public void setComments(Set<Key> comments) {
+		this.comments = comments;
+	}
+
+	public Set<Key> getComments() {
+		return comments;
+	}
+	
+	public void addComment(Key commentKey){
+		this.comments.add(commentKey);
+	}
 	
 	
 	
