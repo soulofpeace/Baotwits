@@ -440,7 +440,6 @@ class FacebookUser extends JavaScriptObject{
 		return FacebookUserInfo.fromJson(this.getFacebookUserInfoString());
 	}
 	private final native String getFacebookUserInfoString()/*-{return this.facebookUserDto.facebookUserInfo;}-*/;
-	private final native JsArray<FacebookUser> getFriends()/*-{alert(this.facebookUserDto.friends);return this.facebookUserDto.friends;}-*/;
 }
 
 class Status extends JavaScriptObject{
@@ -470,6 +469,7 @@ class FacebookUserInfo extends JavaScriptObject{
 	public final native String getUid()/*-{return this.uid;}-*/;
 	public final native String getName()/*-{return this.name;}-*/;
 	public final native String getPicSquare()/*-{return this.pic_square;}-*/;
+	private final native JsArray<FacebookUserInfo> getFriends()/*-{alert(this.friends);return this.friends;}-*/;
 }
 
 

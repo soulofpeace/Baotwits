@@ -7,7 +7,6 @@ public class FacebookUserDto {
 	private String twitterUser;
 	private String twitterLoginURL;
 	private FacebookUserInfo facebookUserInfo;
-	private ArrayList<FacebookUserDto> friends;
 	
 	private ArrayList<StatusDto> statuses;
 	
@@ -42,12 +41,6 @@ public class FacebookUserDto {
 	}
 	public FacebookUserInfo getFacebookUserInfo() {
 		return facebookUserInfo;
-	}
-	public void setFriends(ArrayList<FacebookUserDto> friends) {
-		this.friends = friends;
-	}
-	public ArrayList<FacebookUserDto> getFriends() {
-		return friends;
 	}
 }
 
