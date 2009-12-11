@@ -3,6 +3,7 @@ package com.appspot.baotwits.server.controller.facebook;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.logging.Logger;
@@ -25,15 +26,18 @@ import twitter4j.TwitterException;
 import twitter4j.http.AccessToken;
 import twitter4j.http.RequestToken;
 
+import com.appspot.baotwits.client.data.dto.facebook.CommentDto;
 import com.appspot.baotwits.client.data.dto.facebook.FacebookUserInfo;
 import com.appspot.baotwits.client.data.dto.facebook.StatusDto;
 import com.appspot.baotwits.client.data.dto.facebook.FacebookUserDto;
 import com.appspot.baotwits.server.constants.facebook.FacebookConstants;
 import com.appspot.baotwits.server.constants.facebook.TwitterConstants;
 import com.appspot.baotwits.server.data.dao.TwitterUserDao;
+import com.appspot.baotwits.server.data.dao.facebook.CommentDao;
 import com.appspot.baotwits.server.data.dao.facebook.FacebookUserDao;
 import com.appspot.baotwits.server.data.model.TwitUser;
 import com.appspot.baotwits.server.data.model.TwitterUser;
+import com.appspot.baotwits.server.data.model.facebook.FBComment;
 import com.appspot.baotwits.server.data.model.facebook.FacebookUser;
 import com.appspot.baotwits.server.util.facebook.FacebookParam;
 import com.appspot.baotwits.server.util.facebook.FacebookRest;
@@ -54,6 +58,9 @@ public class BaotwitsFacebookController {
 	private TwitterUserDao twitterUserDao;
 	
 	@Autowired
+	private CommentDao facebookCommentDao;
+	
+	@Autowired
 	private FacebookRest facebookRest;
 	
 	@Autowired
@@ -66,6 +73,7 @@ public class BaotwitsFacebookController {
 			logger.info("Parameter Name: "+parameterNames.nextElement());
 		}
 		String facebookUserId = request.getParameter("fb_sig_user");
+		request.getSession().setAttribute("facebookUserId", facebookUserId);
 		//facebookRest.getFriends(request.getParameter(FacebookParam.USER.toString()), request.getParameter(FacebookParam.SESSION_KEY.toString()));
 		
 		if(this.isFirstTimeUser(facebookUserId)){
@@ -105,35 +113,6 @@ public class BaotwitsFacebookController {
 		String sessionId = request.getParameter(FacebookParam.SESSION_KEY.toString());
 		FacebookUserDto facebookUserDto = this.createFacebookUserDto(facebookUser, sessionId, request.getSession());
 		logger.info("User found is "+facebookUser.getFacebookId());
-		/**
-		FacebookUserDto facebookUserDto = new FacebookUserDto();
-		facebookUserDto.setKey(KeyFactory.keyToString(facebookUser.getKey()));
-		facebookUserDto.setTwitterUser(facebookUser.getTwitterUserKey()!=null?KeyFactory.keyToString(facebookUser.getTwitterUserKey()):null);
-		facebookUserDto.getTwitterLoginURL();
-		/**
-		ArrayList<StatusDto> statuses = new ArrayList();
-		if (facebookUser.getTwitterUserKey()!=null){
-			logger.info("Loading statuses");
-			statuses = this.getStatuses(facebookUser);
-		}
-		else{
-			logger.info("Getting authenticationURL");
-			facebookUserDto.setTwitterLoginURL(this.getTwitAuthorizationLoginURL(request.getSession()));
-			
-		}
-		Key twitterUserKey = facebookUser.getTwitterUserKey();
-		ArrayList<StatusDto> statuses = new ArrayList();
-		if (twitterUserKey!=null){
-			TwitterUser twitterUser= twitterUserDao.getTwitterUser(KeyFactory.keyToString(twitterUserKey));
-			statuses = twitterRest.getFriendStatuses(twitterUser.getAccessToken());
-		}
-		
-		facebookUserDto.setStatuses(statuses); 
-		FacebookUserInfo facebookUserInfo = this.facebookRest.getFacebookUserInfo(request.getParameter(FacebookParam.USER.toString()), request.getParameter(FacebookParam.SESSION_KEY.toString()));
-		logger.info("facebookUserInfo name "+facebookUserInfo.getName());
-		facebookUserDto.setFacebookUserInfo(facebookUserInfo);
-		FacebookUserDto facebookUserDto = this.facebookRest.getFacebookUserDto(userId,  request.getParameter(FacebookParam.SESSION_KEY.toString()));
-		**/
 		
 		return facebookUserDto;
 	}
@@ -165,43 +144,61 @@ public class BaotwitsFacebookController {
 	public FacebookUserDto updateStatus(@PathVariable String status, @PathVariable String userId, HttpServletRequest request) {
 		// TODO Auto-generated method stub
 		FacebookUser facebookUser = this.facebookUserDao.getFacebookUserbyFID(userId);
-		/**
-		Twitter twitter = this.getTwitterUser(twitterUserDao.getTwitterUser(KeyFactory.keyToString(facebookUser.getTwitterUserKey())));
-		try {
-			twitter.updateStatus(status);
-			
-		} catch (TwitterException e) {
-			// TODO Auto-generated catch block
-			logger.warning("Unable to update status for "+ facebookUser.getFacebookId());
-		}
-		
-		FacebookUserDto facebookUserDto = new FacebookUserDto();
-		facebookUserDto.setKey(KeyFactory.keyToString(facebookUser.getKey()));
-		facebookUserDto.setTwitterUser(facebookUser.getTwitterUserKey()!=null?KeyFactory.keyToString(facebookUser.getTwitterUserKey()):null);
-		facebookUserDto.getTwitterLoginURL();
-		request.getSession().setAttribute("facebookUserId", userId);
-		ArrayList<StatusDto> statuses = new ArrayList();
+		String sessionId =request.getParameter(FacebookParam.SESSION_KEY.toString());
+		String twitterLoginUrl="";
 		if (facebookUser.getTwitterUserKey()!=null){
 			logger.info("Loading statuses");
 			TwitterUser twitterUser= twitterUserDao.getTwitterUser(KeyFactory.keyToString(facebookUser.getTwitterUserKey()));
-			statuses = twitterRest.getFriendStatuses(twitterUser.getAccessToken());
 			twitterRest.updateStatus(twitterUser.getAccessToken(), status);
 		}
 		else{
 			logger.info("Getting authenticationURL");
-			facebookUserDto.setTwitterLoginURL(this.getTwitAuthorizationLoginURL(request.getSession()));
+			twitterLoginUrl =this.getTwitAuthorizationLoginURL(request.getSession());
 			
 		}
-			
-		facebookUserDto.setStatuses(statuses); 
-		FacebookUserInfo facebookUserInfo = this.facebookRest.getFacebookUserInfo(request.getParameter(FacebookParam.USER.toString()), request.getParameter(FacebookParam.SESSION_KEY.toString()));
-		logger.info("facebookUserInfo name "+facebookUserInfo.getName());
-		facebookUserDto.setFacebookUserInfo(facebookUserInfo);
-		**/
-		String sessionId =request.getParameter(FacebookParam.SESSION_KEY.toString());
 		FacebookUserDto facebookUserDto = this.createFacebookUserDto(facebookUser, sessionId, request.getSession());
+		facebookUserDto.setTwitterLoginURL(twitterLoginUrl);
 		return facebookUserDto;
 		
+	}
+	
+	@RequestMapping(value="/facebook/status/{statusId}/comment", method =RequestMethod.GET)
+	public ArrayList<CommentDto> getCommentsForStatus(@PathVariable String statusId, Model model, HttpServletRequest request){
+		List<FBComment> comments = this.facebookCommentDao.getCommentByStatusId(statusId);
+		ArrayList<CommentDto> commentsList = new ArrayList<CommentDto>();
+		String sessionId = request.getParameter(FacebookParam.SESSION_KEY.toString());
+		for(FBComment comment: comments){
+			commentsList.add(this.createCommentDto(comment, sessionId, request.getSession()));
+		}
+		return commentsList;
+		
+	}
+	
+	@RequestMapping(value="/facebook/user/{userId}/status/{statusId}/comment/{text}")
+	public ArrayList<CommentDto> addComment(@PathVariable String userId, @PathVariable String statusId, @PathVariable String text, Model model, HttpServletRequest request){
+		FacebookUser facebookUser = facebookUserDao.getFacebookUserbyFID(userId);
+		FBComment comment = new FBComment();
+		Date date = new Date();
+		comment.setDateCreated(date);
+		comment.setDateModified(date);
+		comment.setFacebookUserKey(facebookUser.getKey());
+		comment.setStatusId(statusId);
+		comment.setText(text);
+		comment =this.facebookCommentDao.saveComment(comment);
+		return this.getCommentsForStatus(statusId, model, request);
+		
+	}
+	
+	private CommentDto createCommentDto(FBComment comment, String sessionId, HttpSession session){
+		CommentDto commentDto = new CommentDto();
+		commentDto.setKeyString(KeyFactory.keyToString(comment.getKey()));
+		commentDto.setDateCreated(comment.getDateCreated());
+		commentDto.setDateModified(comment.getDateModified());
+		commentDto.setStatusId(comment.getStatusId());
+		FacebookUser facebookUser = facebookUserDao.getFacebookUser(KeyFactory.keyToString(comment.getFacebookUserKey()));
+		FacebookUserInfo facebookUserInfo = this.facebookRest.getFacebookUserInfo(facebookUser.getFacebookId(), sessionId);
+		commentDto.setFacebookUserInfo(facebookUserInfo);
+		return commentDto;
 	}
 
 	private FacebookUserDto createFacebookUserDto(FacebookUser facebookUser, String sessionId , HttpSession session){
@@ -240,71 +237,7 @@ public class BaotwitsFacebookController {
 			return false;
 		}
 	}
-	/**
-	private ArrayList<StatusDto> getStatuses(FacebookUser facebookUser) {
-		// TODO Auto-generated method stub
-		
-		Twitter twitter = this.getTwitterUser(twitterUserDao.getTwitterUser(KeyFactory.keyToString(facebookUser.getTwitterUserKey())));
-		try {
-			List<twitter4j.Status> statuses = twitter.getFriendsTimeline();
-			return this.getStatusDto(statuses);
-		} catch (TwitterException e) {
-			// TODO Auto-generated catch block
-			logger.warning("Unable to retrieve tweets for "+ facebookUser.getFacebookId());
-			
-		}
-		return null;
-		
-	}
 	
-	
-	private ArrayList<StatusDto> getStatusDto(List<twitter4j.Status> statuses){
-		ArrayList<StatusDto> statusDtos = new ArrayList<StatusDto>();
-		for (twitter4j.Status status: statuses){
-			StatusDto statusDto = new StatusDto();
-			statusDto.setCreatedAt(status.getCreatedAt());
-			statusDto.setFavorited(status.isFavorited());
-			statusDto.setId(status.getId());
-			statusDto.setInReplyToScreenName(status.getInReplyToScreenName());
-			statusDto.setInReplyToStatusId(status.getInReplyToStatusId());
-			statusDto.setInReplyToUserId(status.getInReplyToUserId());
-			statusDto.setSource(status.getSource());
-			statusDto.setText(constructStatus(status.getText()));
-			statusDto.setTruncated(status.isTruncated());
-			statusDto.setScreenName(status.getUser().getScreenName());
-			statusDto.setImageProfileURL(status.getUser().getProfileImageURL().toString());
-			statusDto.setUserId(status.getUser().getId());
-			statusDtos.add(statusDto);
-			
-		}
-		return statusDtos;
-	}
-
-
-	private String constructStatus(String status){
-        String [] parts = status.split("\\s");
-        String outputString="";
-        // Attempt to convert each item into an URL.   
-        for( String item : parts ) try {
-            URL url = new URL(item);
-            // If possible then replace with anchor...
-            outputString+="<a href=\"" + url + "\" target=\"_blank\">"+ url + "</a> " ;    
-        } catch (MalformedURLException e) {
-            // If there was an URL that was not it!...
-            outputString+=item + " " ;
-        }
-        return outputString;
-	}
-	
-	
-	
-	private Twitter getTwitterUser(TwitterUser twitterUser){
-		Twitter twitter = new Twitter();
-		twitter.setOAuthConsumer(TwitterConstants.getConsumerKey(), TwitterConstants.getConsumerSecret());
-		twitter.setOAuthAccessToken(twitterUser.getAccessToken());
-		return twitter;
-	}
-	**/
 	
 	private String getTwitAuthorizationLoginURL(HttpSession session){
 		RequestToken requestToken = twitterRest.getRequestToken();

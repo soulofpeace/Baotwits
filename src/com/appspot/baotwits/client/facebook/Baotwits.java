@@ -1,15 +1,13 @@
 package com.appspot.baotwits.client.facebook;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+
 import com.google.gwt.core.client.EntryPoint;
-import com.google.gwt.core.client.GWT;
+
 import com.google.gwt.core.client.JavaScriptObject;
 import com.google.gwt.core.client.JsArray;
 import com.google.gwt.event.dom.client.ClickEvent;
@@ -21,7 +19,6 @@ import com.google.gwt.event.dom.client.KeyUpHandler;
 import com.google.gwt.i18n.client.DateTimeFormat;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.Window;
-import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.Anchor;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.DisclosurePanel;
@@ -103,6 +100,7 @@ public class Baotwits implements EntryPoint {
 						facebookUser=FacebookUser.fromJson(json);
 						Baotwits.debug("wahahaha"+facebookUser.getStatuses().length());
 						setUpTweetsPanel();
+						setupOwnTweetPanel();
 					}	
 				}
 				
@@ -503,7 +501,7 @@ public class Baotwits implements EntryPoint {
 		
 	}
 	
-	public final native JsArray<Status> getOwnStatuses(String json)/*-{alert(json);eval('('+json+')').statuses}-*/;
+	private final native JsArray<Status> getOwnStatuses(String json)/*-{return eval('('+json+')').statusDtoList}-*/;
 
 	private class CommentDropDown extends VerticalPanel{
 		
@@ -610,14 +608,134 @@ public class Baotwits implements EntryPoint {
 		}
 		
 		private void retrieveCommentsForStatus(){
+			
+			String url="http://baotwits.appspot.com/facebook/status/"+this.statusId+"/comment.json";
+			url=setfacebookRequestParameter(url);
+			RequestBuilder requestBuilder = new RequestBuilder(RequestBuilder.GET, URL.encode(url));
+			requestBuilder.setHeader("Content-Type", "application/json");
+			try{
+				Request request = requestBuilder.sendRequest(null, new RequestCallback() {
+					
+					@Override
+					public void onResponseReceived(Request request, Response response) {
+						Baotwits.debug("Hello receive some response here");
+						// TODO Auto-generated method stub
+						if(200==response.getStatusCode()){
+							String json = response.getText();
+							Baotwits.debug(json);
+							JsArray<Comment> comments = getOwnComment(json);
+							populateCommentTable(comments);
+						}	
+					}
+					
+					@Override
+					public void onError(Request request, Throwable exception) {
+						// TODO Auto-generated method stub
+						
+					}
+				} 
+						
+				);
+			}
+			catch(RequestException ex){
+				
+			}
 			this.contentPanel.add(this.getCommentTable());
 		}
+		
+		private void populateCommentTable(JsArray<Comment> commentsList){
+			for(int i=0; i< commentsList.length();i++){
+				Comment comment = commentsList.get(i);
+				if(!comments.contains(comment.getKey())){
+					HorizontalPanel commentContainerPanel = new HorizontalPanel();
+					VerticalPanel commentorProfilePixPanel = createCommentorProfilePixPanel(comment);
+					VerticalPanel commentsPanel = createCommentsPanel(comment);
+					
+					commentContainerPanel.add(commentorProfilePixPanel);
+					commentContainerPanel.add(commentsPanel);
+					
+					getCommentTable().insertRow(i);
+					getCommentTable().setWidget(i, 0, commentContainerPanel);
+					getCommentTable().getCellFormatter().addStyleName(i, 0, "commentBox");
+					getCommentTable().getCellFormatter().setWidth(i, 0, String.valueOf(tweetsWidth));
+					comments.add(comment.getKey());
+				}
+			}
+			
+		}
+		
+		private VerticalPanel createCommentorProfilePixPanel(Comment comment){
+			 VerticalPanel commentorProfilePixPanel = new VerticalPanel();
+			 Image profilePix = new Image(comment.getFacebookUserInfo().getPicSquare());
+			 profilePix.setWidth(String.valueOf(this.commentorProfilePixSize));
+			 commentorProfilePixPanel.add(profilePix);
+			 return commentorProfilePixPanel;
+			 
+		}
+		
+		private VerticalPanel createCommentsPanel(Comment comment){
+			VerticalPanel commentsPanel = new VerticalPanel();
+			
+			Label name = new Label(comment.getFacebookUserInfo().getName());
+			name.setWordWrap(true);
+			name.setWidth(String.valueOf(this.commentsWidth));
+			
+			Label commentsText = new Label();
+			commentsText.setText(comment.getText());
+			commentsText.setWidth(String.valueOf(commentsWidth));
+			commentsText.setWordWrap(true);
+			
+			
+			DateTimeFormat dateTimeFormat = DateTimeFormat.getFormat("yyyy.MM.dd 'at' HH:mm:ss");
+			Label dateCommented = new Label(dateTimeFormat.format(comment.getDateModified()));
+			dateCommented.setWidth(String.valueOf(commentsWidth));
+			dateCommented.setWordWrap(true);
+			
+			
+			commentsPanel.add(name);
+			commentsPanel.add(dateCommented);
+			commentsPanel.add(commentsText);
+			
+			return commentsPanel;
+		}
+		
 		
 		private void createPostButton(){
 			postButton.addClickHandler(new ClickHandler() {
 				
 				@Override
 				public void onClick(ClickEvent event) {
+					String text = commentBox.getText();
+					String url="http://baotwits.appspot.com/facebook/user/"+facebookUser.getFacebookUserInfo().getUid()+"/status/"+statusId+"/comment/"+text+".json";
+					url=setfacebookRequestParameter(url);
+					RequestBuilder requestBuilder = new RequestBuilder(RequestBuilder.GET, URL.encode(url));
+					requestBuilder.setHeader("Content-Type", "application/json");
+					try{
+						Request request = requestBuilder.sendRequest(null, new RequestCallback() {
+							
+							@Override
+							public void onResponseReceived(Request request, Response response) {
+								Baotwits.debug("Hello receive some response here");
+								// TODO Auto-generated method stub
+								if(200==response.getStatusCode()){
+									String json = response.getText();
+									Baotwits.debug(json);
+									JsArray<Comment> comments = getOwnComment(json);
+									populateCommentTable(comments);
+									commentBox.setText("");
+								}	
+							}
+							
+							@Override
+							public void onError(Request request, Throwable exception) {
+								// TODO Auto-generated method stub
+								
+							}
+						});
+					}
+					catch(RequestException ex){
+						
+					}		
 				}
 			});
 			this.contentPanel.add(postButton);
@@ -668,10 +786,14 @@ public class Baotwits implements EntryPoint {
 		
 		**/
 		
-		
+		private final native JsArray<Comment> getOwnComment(String json)/*-{return eval('('+json+')').commentDtoList}-*/;
 		
 		
 	}
+	public static Date toDate(double millis){
+		return new Date((long)millis);
+	}
+	
 	
 }
 
@@ -697,7 +819,7 @@ class FacebookUser extends JavaScriptObject{
 
 class Status extends JavaScriptObject{
 	protected Status(){}
-	public final native Date getCreatedAt()/*-{ return @com.appspot.baotwits.client.facebook.Status::toDate(D)(this.createdAt);}-*/;
+	public final native Date getCreatedAt()/*-{ return @com.appspot.baotwits.client.facebook.Baotwits::toDate(D)(this.createdAt);}-*/;
 	public final native String getId()/*-{ return this.id+"";}-*/;
 	public final native String getImageProfileURL()/*-{ return this.imageProfileURL;}-*/;
 	public final native String getInReplyToScreenName()/*-{return this.inReplyToScreenName;}-*/;
@@ -709,9 +831,7 @@ class Status extends JavaScriptObject{
 	public final native String getUserId()/*-{return this.userId;}-*/;
 	public final native boolean isFavorited()/*-{return this.isFavorited;}-*/;
 	public final native boolean isTruncated()/*-{return this.isTruncated;}-*/;
-	public static Date toDate(double millis){
-		return new Date((long)millis);
-	}
+	
 }
 
 class FacebookUserInfo extends JavaScriptObject{
@@ -725,4 +845,16 @@ class FacebookUserInfo extends JavaScriptObject{
 	private final native JsArray<FacebookUserInfo> getFriends()/*-{alert(this.friends);return this.friends;}-*/;
 }
 
+class Comment extends JavaScriptObject{
+	protected Comment(){}
+	public final native Date getDateCreated()/*-{return @com.appspot.baotwits.client.facebook.Baotwits::toDate(D)(this.dateCreated);}-*/;
+	public final native Date getDateModified()/*-{return @com.appspot.baotwits.client.facebook.Baotwits::toDate(D)(this.dateModified);}-*/;
+	public final native String getKey()/*-{return this.comment.keyString;}-*/;
+	public final native String getStatusId()/*-{return this.comment.statusId;}-*/;
+	public final native String getText()/*-{return this.comment.text;}-*/;
+	public final  FacebookUserInfo getFacebookUserInfo(){
+		return FacebookUserInfo.fromJson(this.getFacebookUserInfoString());
+	}
+	private final native String getFacebookUserInfoString()/*-{return this.facebookUserInfo;}-*/;
+}
 
