@@ -57,6 +57,7 @@ public class FacebookCommentDaoImpl implements CommentDao {
 			tnx.begin();
 			Query query = pm.newQuery(FBComment.class);
 			query.setFilter("statusId == statusIdParam");
+			query.setOrdering("dateCreated asc");
 			query.declareParameters("String statusIdParam");
 			logger.info("Status id "+statusId);
 			List<FBComment> comments = (List<FBComment>)query.execute(statusId);

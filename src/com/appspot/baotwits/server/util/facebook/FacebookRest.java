@@ -175,6 +175,52 @@ public class FacebookRest {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			logger.warning(e.getMessage());
+			return this.getFacebookUserInfoWithoutFriends(uid, sessionId);
+		}
+	}
+	
+	private FacebookUserInfo getFacebookUserInfoWithoutFriends(String uid, String sessionId){
+		ParamsMap paramsMap = new ParamsMap();
+		paramsMap.put("method", "FQL.multiquery" );
+		paramsMap.put("api_key", FacebookConstants.getFacebookAPIKey());
+		paramsMap.put("call_id", String.valueOf(new Date().getTime()));
+		paramsMap.put("v","1.0");
+		paramsMap.put("session_key", sessionId);
+		paramsMap.put("format", "JSON");
+		paramsMap.put("queries", "{\"user\": \"select uid, name, pic_square from user where uid ="+uid+"\"}");
+		
+		String sigParam="sig::"+FacebookSignatureUtil.generateSignature(paramsMap.toSignatureArray(), FacebookConstants.getFacebookApplicationKey());
+		paramsMap.put("sig",FacebookSignatureUtil.generateSignature(paramsMap.toSignatureArray(), FacebookConstants.getFacebookApplicationKey()));
+		String urlString = "http://api.facebook.com/restserver.php?"+paramsMap.toURLString();
+		logger.info("UserInfoURL is"+urlString);
+		String result = this.getJSONURLResponse(urlString);
+		logger.info("result: "+result);
+		
+		try {
+			JSONArray resultJsonArray = new JSONArray(result);
+			ArrayList<FacebookUserInfo> friends = new ArrayList<FacebookUserInfo>();
+			FacebookUserInfo facebookUserInfo = new FacebookUserInfo();
+			
+			
+			for(int i=0; i<resultJsonArray.length();i++){
+				JSONObject jsonObject = resultJsonArray.getJSONObject(i);
+				if (jsonObject.getString("name").equals("friends")){
+					friends =this.getFriendFacebookUserInfo(jsonObject.getJSONArray("fql_result_set"));
+				}
+				if(jsonObject.getString("name").equals("user")){
+					JSONObject userInfo = jsonObject.getJSONArray("fql_result_set").getJSONObject(0);
+					facebookUserInfo.setName(userInfo.getString("name"));
+					facebookUserInfo.setPic_square(userInfo.getString("pic_square"));
+					facebookUserInfo.setUid(userInfo.getString("uid"));
+					
+				}
+			}
+			facebookUserInfo.setFriends(friends);
+			return facebookUserInfo;
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			logger.warning(e.getMessage());
 			return null;
 		}
 	}

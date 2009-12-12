@@ -36,6 +36,7 @@ import com.google.gwt.http.client.*;
 public class Baotwits implements EntryPoint {
 	
 	private FacebookUser facebookUser;
+	private String facebookUserId;
 	
 	private static Label debugLabel = new Label();
 	
@@ -46,8 +47,11 @@ public class Baotwits implements EntryPoint {
 	
 	private FlexTable statusesTable = new FlexTable();
 	private FlexTable ownStatusesTable = new FlexTable();
+	private FlexTable friendTable = new FlexTable();
+	private FlexTable friendStatusTable = new FlexTable();
 	private ArrayList<String> statuses = new ArrayList<String>();
 	private ArrayList<String> ownStatus = new ArrayList<String>();
+	private ArrayList<String> friends = new ArrayList<String>();
 	private VerticalPanel tweetPanel = new VerticalPanel();
 	private TextArea tweetBox = new TextArea();
 	private Button tweetButton = new Button();
@@ -57,11 +61,12 @@ public class Baotwits implements EntryPoint {
 	private VerticalPanel ownTweetsPanel = new VerticalPanel();
 	private VerticalPanel friendsTweetsPanel = new VerticalPanel();
 	private TabPanel mainPanel = new TabPanel();
-	private Timer timer;
-	
+	private Timer tweettweetTimer;
+	private Timer owntweetTimer;
 	private Map<String, List<String>> parameterMap;
 	
-
+	private boolean isTab;
+	private boolean isCanvas;
 	
 	public void onModuleLoad(){
 		Baotwits.debug("start");
@@ -69,20 +74,37 @@ public class Baotwits implements EntryPoint {
 		if (this.isDebug()){
 			RootPanel.get().add(debugLabel);
 		}
-		String facebookUserId = Window.Location.getParameter("fb_sig_user");
-		parameterMap = Window.Location.getParameterMap();
-		this.setFacebookUser(facebookUserId);
-		this.mainPanel.setWidth(String.valueOf(this.tweetsWidth+this.imageProfileSize));
-		this.mainPanel.add(this.twitterPanel, "Tweet Tweet");
-		this.mainPanel.add(this.friendsTweetsPanel, "Friends Tweet");
-		this.mainPanel.add(this.ownTweetsPanel, "Own Tweet");
-		this.mainPanel.selectTab(0);
-		RootPanel.get().add(this.mainPanel);
-		
+		/**this.setParameters();
+		if(isCanvas){
+			this.loadCanvasContent();
+		}
+		else{
+			if(isTab){
+				this.loadTabContent();
+			}
+		}**/
+		this.loadCanvasContent();
 		
 	}
 	
-	public void setFacebookUser(String facebookUserId){
+	private void loadTabContent(){
+		
+	}
+	
+	private void loadCanvasContent(){
+		this.facebookUserId = Window.Location.getParameter("fb_sig_user");
+		this.parameterMap = Window.Location.getParameterMap();
+		this.setCanvasFacebookUser(this.facebookUserId);
+		this.mainPanel.setWidth(String.valueOf(this.tweetsWidth+this.imageProfileSize));
+		this.twitterPanel.setWidth(String.valueOf(this.tweetsWidth+this.imageProfileSize-10));
+		this.friendsTweetsPanel.setWidth(String.valueOf(this.tweetsWidth+this.imageProfileSize-10));
+		this.ownTweetsPanel.setWidth(String.valueOf(this.tweetsWidth+this.imageProfileSize-10));
+		this.mainPanel.add(this.twitterPanel, "Tweet Tweet");
+		this.mainPanel.selectTab(0);
+		RootPanel.get().add(this.mainPanel);
+	}
+	
+	private void setCanvasFacebookUser(String facebookUserId){
 		String url="http://baotwits.appspot.com/facebook/user/"+facebookUserId+".json";
 		url=this.setfacebookRequestParameter(url);
 		RequestBuilder requestBuilder = new RequestBuilder(RequestBuilder.GET, URL.encode(url));
@@ -99,8 +121,11 @@ public class Baotwits implements EntryPoint {
 						Baotwits.debug(json);
 						facebookUser=FacebookUser.fromJson(json);
 						Baotwits.debug("wahahaha"+facebookUser.getStatuses().length());
-						setUpTweetsPanel();
-						setupOwnTweetPanel();
+						setUpCanvasTweetsPanel();
+						setupCanvasFriendsTweetPanel();
+						mainPanel.add(friendsTweetsPanel, "Friends Tweet");
+						setupCanvasOwnTweetPanel();
+						mainPanel.add(ownTweetsPanel, "Own Tweet");
 					}	
 				}
 				
@@ -118,7 +143,7 @@ public class Baotwits implements EntryPoint {
 		}
 	}
 	
-	private void setUpTweetsPanel(){
+	private void setUpCanvasTweetsPanel(){
 		if(facebookUser.getStatuses().length()==0){
 			VerticalPanel setupPanel = new VerticalPanel();
 			Label setupLabel = new Label("Setup your twitter acoount");
@@ -131,8 +156,8 @@ public class Baotwits implements EntryPoint {
 		else{
 			loadWelcomeMsg();
 			loadTweetPanel();
-			loadStatuses();
-			timer = new Timer() {
+			loadFriendStatuses();
+			tweettweetTimer = new Timer() {
 				
 				@Override
 				public void run() {
@@ -140,88 +165,13 @@ public class Baotwits implements EntryPoint {
 					updateFacebookUser();
 				}
 			};
-			timer.scheduleRepeating(300000);
+			tweettweetTimer.scheduleRepeating(300000);
 		}
 	}
 	
-	private void setupOwnTweetPanel(){
-		this.updateOwnStatuses();
-		timer = new Timer() {
-			
-			@Override
-			public void run() {
-				// TODO Auto-generated method stub
-				updateOwnStatuses();
-			}
-		};
-		timer.scheduleRepeating(300000);
-		
-	}
 	
-	private void updateOwnStatuses(){
-		String url="http://baotwits.appspot.com/facebook/user/"+facebookUser.getFacebookUserInfo().getUid()+"/ownStatuses.json";
-		url=this.setfacebookRequestParameter(url);
-		RequestBuilder requestBuilder = new RequestBuilder(RequestBuilder.GET, URL.encode(url));
-		requestBuilder.setHeader("Content-Type", "application/json");
-		requestBuilder.setHeader("Content-Type", "application/json");
-		try{
-			Request request = requestBuilder.sendRequest(null, new RequestCallback() {
-				
-				@Override
-				public void onResponseReceived(Request request, Response response) {
-					Baotwits.debug("Hello receive some response here");
-					// TODO Auto-generated method stub
-					if(200==response.getStatusCode()){
-						String json = response.getText();
-						Baotwits.debug(json);
-						JsArray<Status> statuses = getOwnStatuses(json);
-						loadOwnStatuses(statuses);
-						
-					}	
-				}
-				
-				@Override
-				public void onError(Request request, Throwable exception) {
-					// TODO Auto-generated method stub
-					
-				}
-			} 
-					
-			);
-		}
-		catch(RequestException ex){
-			
-		}
-	}
 	
-	private void loadOwnStatuses(JsArray<Status> statuses){
-		int rowCount=0;
-		for(int i=0; i<statuses.length();i++){
-			Status status = statuses.get(i);
-			if(!this.ownStatus.contains(status.getId())){
-				VerticalPanel vp1=createScreenNamePanel(status);
-				VerticalPanel vp2=createTweets(status);
-				ownStatusesTable.insertRow(rowCount);
-				ownStatusesTable.setWidget(rowCount, 0, vp1);
-				ownStatusesTable.setWidget(rowCount, 1, vp2);
-				ownStatusesTable.getRowFormatter().addStyleName(rowCount, "status");
-				ownStatusesTable.getCellFormatter().setWidth(rowCount, 0, String.valueOf(imageProfileSize));
-				ownStatusesTable.getCellFormatter().setWidth(rowCount, 1, String.valueOf(tweetsWidth));
-				rowCount++;
-				CommentDropDown commentDropDown = new CommentDropDown(String.valueOf(status.getId()));
-				ownStatusesTable.setWidget(rowCount, 1, commentDropDown );
-				ownStatusesTable.getFlexCellFormatter().setColSpan(rowCount, 1, 2);
-				rowCount++;
-				ownStatus.add(status.getId());
-			}
-			else{
-				break;
-			}
-			
-		}
-		statusesTable.setStyleName("tweets");
-		this.ownTweetsPanel.add(this.ownStatusesTable);
-	}
+	
 	
 	private void updateFacebookUser(){
 		String url="http://baotwits.appspot.com/facebook/user/"+this.facebookUser.getFacebookUserInfo().getUid()+".json";
@@ -240,7 +190,7 @@ public class Baotwits implements EntryPoint {
 						Baotwits.debug(json);
 						facebookUser=FacebookUser.fromJson(json);
 						Baotwits.debug("wahahaha"+facebookUser.getStatuses().length());
-						loadStatuses();
+						loadFriendStatuses();
 						
 					}	
 				}
@@ -258,18 +208,7 @@ public class Baotwits implements EntryPoint {
 			
 		}
 	}
-
 	
-	
-	private void setDimension(){
-		//leaving width for scrollbar
-		int width = Window.getClientWidth()-40;
-		this.debug("width is "+width);
-		this.imageProfileSize = ((width/4.0))<48?width/4.0:48;
-		this.tweetsWidth=width-this.imageProfileSize;
-	}
-	
-
 	private void loadWelcomeMsg(){
 		HorizontalPanel horizontalPanel = new HorizontalPanel();
 		welcomeMsg.getElement().setInnerHTML("Welcome "+facebookUser.getFacebookUserInfo().getName());
@@ -279,7 +218,7 @@ public class Baotwits implements EntryPoint {
 		twitterPanel.add(horizontalPanel);
 	}
 	
-	private void loadStatuses(){
+	private void loadFriendStatuses(){
 		int count=0;
 		JsArray<Status> result = this.facebookUser.getStatuses();
 		Baotwits.debug("Yoyo1 "+result.length());
@@ -358,7 +297,7 @@ public class Baotwits implements EntryPoint {
 								Baotwits.debug(json);
 								facebookUser=FacebookUser.fromJson(json);
 								Baotwits.debug("wahahaha"+facebookUser.getStatuses().length());
-								loadStatuses();
+								loadFriendStatuses();
 								tweetBox.setText("");
 							}	
 						}
@@ -420,6 +359,206 @@ public class Baotwits implements EntryPoint {
 		twitterPanel.add(tweetPanel);
 		
 	}
+
+	private void setupCanvasOwnTweetPanel(){
+		if(facebookUser.getStatuses().length()>0){
+			this.updateOwnStatuses();
+			owntweetTimer = new Timer() {
+				
+				@Override
+				public void run() {
+					// TODO Auto-generated method stub
+					updateOwnStatuses();
+				}
+			};
+			owntweetTimer.scheduleRepeating(300000);
+			
+		}
+		
+	}
+	
+	private void updateOwnStatuses(){
+		String url="http://baotwits.appspot.com/facebook/user/"+facebookUser.getFacebookUserInfo().getUid()+"/ownStatuses.json";
+		url=this.setfacebookRequestParameter(url);
+		RequestBuilder requestBuilder = new RequestBuilder(RequestBuilder.GET, URL.encode(url));
+		requestBuilder.setHeader("Content-Type", "application/json");
+		requestBuilder.setHeader("Content-Type", "application/json");
+		try{
+			Request request = requestBuilder.sendRequest(null, new RequestCallback() {
+				
+				@Override
+				public void onResponseReceived(Request request, Response response) {
+					Baotwits.debug("Hello receive some response here");
+					// TODO Auto-generated method stub
+					if(200==response.getStatusCode()){
+						String json = response.getText();
+						Baotwits.debug(json);
+						JsArray<Status> statuses = getOwnStatuses(json);
+						ownStatusesTable=loadStatusesWithComment(statuses, ownStatusesTable, ownStatus);
+						statusesTable.setStyleName("tweets");
+						ownTweetsPanel.add(ownStatusesTable);
+					}	
+				}
+				
+				@Override
+				public void onError(Request request, Throwable exception) {
+					// TODO Auto-generated method stub
+					
+				}
+			} 
+					
+			);
+		}
+		catch(RequestException ex){
+			
+		}
+	}
+	
+	private FlexTable loadStatusesWithComment(JsArray<Status> statuses, FlexTable flexTable, ArrayList<String> trackingTable){
+		int rowCount=0;
+		for(int i=0; i<statuses.length();i++){
+			Status status = statuses.get(i);
+			if(!trackingTable.contains(status.getId())){
+				VerticalPanel vp1=createScreenNamePanel(status);
+				VerticalPanel vp2=createTweets(status);
+				flexTable.insertRow(rowCount);
+				flexTable.setWidget(rowCount, 0, vp1);
+				flexTable.setWidget(rowCount, 1, vp2);
+				flexTable.getRowFormatter().addStyleName(rowCount, "status");
+				flexTable.getCellFormatter().setWidth(rowCount, 0, String.valueOf(imageProfileSize));
+				flexTable.getCellFormatter().setWidth(rowCount, 1, String.valueOf(tweetsWidth));
+				rowCount++;
+				CommentDropDown commentDropDown = new CommentDropDown(String.valueOf(status.getId()));
+				flexTable.setWidget(rowCount, 1, commentDropDown );
+				flexTable.getFlexCellFormatter().setColSpan(rowCount, 1, 2);
+				rowCount++;
+				trackingTable.add(status.getId());
+			}
+			
+		}
+		return flexTable;
+		
+	}
+	
+	private void setupCanvasFriendsTweetPanel(){
+		if(this.facebookUser.getFacebookUserInfo().getFriends().length()==0){
+			Label label= new Label("None of your friends are using Baotwits yet");
+			this.friendsTweetsPanel.add(label);
+			this.mainPanel.add(this.friendsTweetsPanel, "Friends Tweet");
+		}
+		else{
+			JsArray<FacebookUserInfo> friends = this.facebookUser.getFacebookUserInfo().getFriends();
+			for (int i =0; i<friends.length();i++){
+				if(!this.friends.contains(friends.get(i).getUid())){
+					final FacebookUserInfo friend =friends.get(i);
+					VerticalPanel vp1 = new VerticalPanel();
+					Image profileImage = new Image();
+					profileImage.setUrl(friends.get(i).getPicSquare());
+					profileImage.setHeight(String.valueOf(this.imageProfileSize));
+					profileImage.setWidth(String.valueOf(this.imageProfileSize));
+					vp1.add(profileImage);
+					HorizontalPanel vp2 = new HorizontalPanel();
+					Label name = new Label(friends.get(i).getName());
+					vp2.add(name);
+					Button viewTweets = new Button("View Tweets");
+					viewTweets.addClickHandler(new ClickHandler() {
+						
+						@Override
+						public void onClick(ClickEvent event) {
+							// TODO Auto-generated method stub
+							updateFBFriendStatus(friend.getUid());
+						}
+					});
+					//vp2.add(viewTweets);
+					this.friendTable.insertRow(i);
+					this.friendTable.setWidget(i, 0, vp1);
+					this.friendTable.setWidget(i, 1, vp2);
+					this.friendTable.setWidget(i, 2, viewTweets);
+					
+					
+					this.friendTable.getCellFormatter().setWidth(i, 0, String.valueOf(imageProfileSize));
+					this.friendTable.getCellFormatter().setWidth(i, 1, String.valueOf(this.tweetsWidth/3*2));
+					this.friendTable.getCellFormatter().setWidth(i, 2, String.valueOf(this.tweetsWidth/3));
+					this.friends.add(friends.get(i).getUid());
+				}
+			}
+			while(this.friendsTweetsPanel.getWidgetCount()>0){
+				this.friendsTweetsPanel.remove(0);
+			}
+			this.friendsTweetsPanel.add(friendTable);
+		}
+	}
+	
+	private void updateFBFriendStatus(String facebookId){
+		String url="http://baotwits.appspot.com/facebook/user/"+facebookId+"/ownStatuses.json";
+		url=this.setfacebookRequestParameter(url);
+		RequestBuilder requestBuilder = new RequestBuilder(RequestBuilder.GET, URL.encode(url));
+		requestBuilder.setHeader("Content-Type", "application/json");
+		requestBuilder.setHeader("Content-Type", "application/json");
+		try{
+			Request request = requestBuilder.sendRequest(null, new RequestCallback() {
+				
+				@Override
+				public void onResponseReceived(Request request, Response response) {
+					Baotwits.debug("Hello receive some response here");
+					// TODO Auto-generated method stub
+					if(200==response.getStatusCode()){
+						String json = response.getText();
+						Baotwits.debug(json);
+						JsArray<Status> statuses = getOwnStatuses(json);
+						FlexTable friendStatus = new FlexTable();
+						Button backButtonTop = new Button("Back");
+						backButtonTop.addClickHandler(new ClickHandler() {
+							
+							@Override
+							public void onClick(ClickEvent event) {
+								// TODO Auto-generated method stub
+								setupCanvasFriendsTweetPanel();
+							}
+						});
+						Button backButtonBottom = new Button("Back");
+						backButtonBottom.addClickHandler(new ClickHandler() {
+							
+							@Override
+							public void onClick(ClickEvent event) {
+								// TODO Auto-generated method stub
+								setupCanvasFriendsTweetPanel();
+							}
+						});
+						ArrayList<String> trackingList = new ArrayList<String>();
+						friendStatus=loadStatusesWithComment(statuses, friendStatus, trackingList);
+						friendsTweetsPanel.remove(0);
+						friendsTweetsPanel.add(backButtonTop);
+						friendsTweetsPanel.add(friendStatus);
+						friendsTweetsPanel.add(backButtonBottom);
+
+					}	
+				}
+				
+				@Override
+				public void onError(Request request, Throwable exception) {
+					// TODO Auto-generated method stub
+					
+				}
+			} 
+					
+			);
+		}
+		catch(RequestException ex){
+			
+		}
+	}
+	
+	private void setDimension(){
+		//leaving width for scrollbar
+		int width = Window.getClientWidth()-40;
+		this.debug("width is "+width);
+		this.imageProfileSize = ((width/4.0))<48?width/4.0:48;
+		this.tweetsWidth=width-this.imageProfileSize;
+	}
+	
+
+	
 	
 	private VerticalPanel createScreenNamePanel(Status status){
 		VerticalPanel vp1 = new VerticalPanel();
@@ -498,6 +637,27 @@ public class Baotwits implements EntryPoint {
 			
 		}
 		return url;
+		
+	}
+	
+	
+	private void setParameters(){
+		this.parameterMap = Window.Location.getParameterMap();
+		String tab = Window.Location.getParameter("fb_sig_in_profile_tab");
+		if (tab.equalsIgnoreCase("1")){
+			this.isTab=true;
+		}
+		else{
+			this.isTab=false;
+		}
+		String canvas = Window.Location.getParameter("fb_sig_in_canvas");
+		if(canvas.equalsIgnoreCase("1")){
+			isCanvas= true;
+			this.facebookUserId = Window.Location.getParameter("fb_sig_user");
+		}
+		else{
+			this.isCanvas=false;
+		}
 		
 	}
 	
@@ -601,7 +761,7 @@ public class Baotwits implements EntryPoint {
 		
 
 		private void createCommentBox(){
-			this.commentBox.setWidth(String.valueOf(tweetsWidth));
+			this.commentBox.setWidth(String.valueOf(this.commentorProfilePixSize+this.commentsWidth));
 			this.getCommentBox().setText("");
 			this.getCommentBox().setVisibleLines(3);
 			this.contentPanel.add(commentBox);
@@ -661,6 +821,9 @@ public class Baotwits implements EntryPoint {
 					comments.add(comment.getKey());
 				}
 			}
+			if(comments.size()>0){
+				commentDropDown.getHeaderTextAccessor().setText(comments.size()+" Comments!");
+			}
 			
 		}
 		
@@ -707,6 +870,7 @@ public class Baotwits implements EntryPoint {
 				public void onClick(ClickEvent event) {
 					String text = commentBox.getText();
 					String url="http://baotwits.appspot.com/facebook/user/"+facebookUser.getFacebookUserInfo().getUid()+"/status/"+statusId+"/comment/"+text+".json";
+					Baotwits.debug("WHAHAHHAHA"+url);
 					url=setfacebookRequestParameter(url);
 					RequestBuilder requestBuilder = new RequestBuilder(RequestBuilder.GET, URL.encode(url));
 					requestBuilder.setHeader("Content-Type", "application/json");
@@ -742,7 +906,7 @@ public class Baotwits implements EntryPoint {
 		}
 		
 		private void setDimension(){
-			this.width = tweetsWidth;	
+			this.width = tweetsWidth-50;	
 			this.commentorProfilePixSize=(width/4.0>48)?48:width/4.0;
 			this.commentsWidth=this.width-commentorProfilePixSize;
 			
@@ -842,16 +1006,16 @@ class FacebookUserInfo extends JavaScriptObject{
 	public final native String getUid()/*-{return this.uid;}-*/;
 	public final native String getName()/*-{return this.name;}-*/;
 	public final native String getPicSquare()/*-{return this.pic_square;}-*/;
-	private final native JsArray<FacebookUserInfo> getFriends()/*-{alert(this.friends);return this.friends;}-*/;
+	public final native JsArray<FacebookUserInfo> getFriends()/*-{return this.friends;}-*/;
 }
 
 class Comment extends JavaScriptObject{
 	protected Comment(){}
 	public final native Date getDateCreated()/*-{return @com.appspot.baotwits.client.facebook.Baotwits::toDate(D)(this.dateCreated);}-*/;
 	public final native Date getDateModified()/*-{return @com.appspot.baotwits.client.facebook.Baotwits::toDate(D)(this.dateModified);}-*/;
-	public final native String getKey()/*-{return this.comment.keyString;}-*/;
-	public final native String getStatusId()/*-{return this.comment.statusId;}-*/;
-	public final native String getText()/*-{return this.comment.text;}-*/;
+	public final native String getKey()/*-{return this.keyString;}-*/;
+	public final native String getStatusId()/*-{return this.statusId;}-*/;
+	public final native String getText()/*-{return this.text;}-*/;
 	public final  FacebookUserInfo getFacebookUserInfo(){
 		return FacebookUserInfo.fromJson(this.getFacebookUserInfoString());
 	}

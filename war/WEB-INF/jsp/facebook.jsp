@@ -4,6 +4,7 @@
     <meta http-equiv="content-type" content="text/html; charset=UTF-8">
     <title>facebook</title>
     <script type="text/javascript" language="javascript" src="../../com.appspot.baotwits.FacebookBao/com.appspot.baotwits.FacebookBao.nocache.js"></script>
+     <link type="text/css" rel="stylesheet" href="/Baotwits.css">
   </head>
 
   <body>

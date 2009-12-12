@@ -33,9 +33,14 @@ public class FacebookUserDaoImpl implements FacebookUserDao {
 	public FacebookUser getFacebookUser(String keyString) {
 		// TODO Auto-generated method stub
 		PersistenceManager pm = pmf.getPersistenceManager();
-		FacebookUser facebookUser = pm.getObjectById(FacebookUser.class, KeyFactory.stringToKey(keyString));
-		pm.close();
-		return pm.detachCopy(facebookUser);
+		try{
+			
+			FacebookUser facebookUser = pm.getObjectById(FacebookUser.class, KeyFactory.stringToKey(keyString));
+			return pm.detachCopy(facebookUser);
+		}
+		finally{
+			pm.close();
+		}
 		
 	}
 

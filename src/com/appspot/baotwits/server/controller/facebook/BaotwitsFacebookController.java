@@ -195,6 +195,7 @@ public class BaotwitsFacebookController {
 		commentDto.setDateCreated(comment.getDateCreated());
 		commentDto.setDateModified(comment.getDateModified());
 		commentDto.setStatusId(comment.getStatusId());
+		commentDto.setText(comment.getText());
 		FacebookUser facebookUser = facebookUserDao.getFacebookUser(KeyFactory.keyToString(comment.getFacebookUserKey()));
 		FacebookUserInfo facebookUserInfo = this.facebookRest.getFacebookUserInfo(facebookUser.getFacebookId(), sessionId);
 		commentDto.setFacebookUserInfo(facebookUserInfo);

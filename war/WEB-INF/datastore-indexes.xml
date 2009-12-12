@@ -4,4 +4,8 @@
     	<property name="statusId" direction="asc"/>
         <property name="date" direction="asc" />
     </datastore-index>
+    <datastore-index kind="FBComment" ancestor="false">
+    	<property name="statusId" direction="asc"/>
+        <property name="dateCreated" direction="asc" />
+    </datastore-index>
 </datastore-indexes>

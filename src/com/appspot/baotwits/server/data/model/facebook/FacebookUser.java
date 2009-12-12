@@ -1,5 +1,6 @@
 package com.appspot.baotwits.server.data.model.facebook;
 
+import java.util.HashSet;
 import java.util.Set;
 
 import javax.jdo.annotations.IdGeneratorStrategy;
@@ -25,7 +26,7 @@ public class FacebookUser {
 	private Key twitterUserKey;
 	
 	@Persistent(defaultFetchGroup = "true")
-	private Set<Key> comments;
+	private Set<Key> comments = new HashSet<Key>();
 
 	public void setKey(Key key) {
 		this.key = key;
@@ -60,7 +61,13 @@ public class FacebookUser {
 	}
 	
 	public void addComment(Key commentKey){
-		this.comments.add(commentKey);
+		if(comments!=null){
+			comments.size();
+			this.comments.add(commentKey);
+		}
+		else{
+			comments = new HashSet<Key>();
+		}
 	}
 	
 	

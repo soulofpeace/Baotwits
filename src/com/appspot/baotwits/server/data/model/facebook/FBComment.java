@@ -29,7 +29,7 @@ public class FBComment {
 	@Persistent
 	private String text;
 	
-	@Persistent
+	@Persistent(defaultFetchGroup = "true")
 	@Extension(vendorName="datanucleus", key="gae.parent-pk", value="true")
 	private Key facebookUserKey;
 
